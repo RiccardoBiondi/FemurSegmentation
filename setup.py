@@ -23,6 +23,8 @@ except ImportError:
 from Cython.Distutils import build_ext
 from distutils.sysconfig import customize_compiler
 
+
+
 def get_requires (requirements_filename):
   '''
   What packages are required for this module to be executed?
@@ -147,7 +149,7 @@ ext_modules = [
             ]
 
 setup(
-        name                          = '{}Support'.format(NAME),
+        name                          = '{}'.format(NAME),
         version                       = about['__version__'],
         description                   = DESCRIPTION,
         long_description              = LONG_DESCRIPTION,

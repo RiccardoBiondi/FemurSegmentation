@@ -101,11 +101,11 @@ def median_filter(image, radius = 1) :
 
 
 
-def connected_components(image) :
+def connected_components(image, voxel_type = itk.SS) :
     '''
     '''
 
-    ImageType = itk.Image[itk.SS, 3]
+    ImageType = itk.Image[voxel_type, 3]
 
     cc = itk.ConnectedComponentImageFilter[ImageType, ImageType].New()
     _ = cc.SetInput(image)
@@ -329,5 +329,73 @@ def opening(image, radius = 1, bkg = 0, frg = 1) :
     return opening
 
 
+
+def iterative_hole_filling(image, max_iter = 25, radius = 10,
+                           majority_threshold = 1, bkg_val = 0, fgr_val = 1) :
+    '''
+    '''
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+
+    filter_ = itk.VotingBinaryIterativeHoleFillingImageFilter[ImageType].New()
+    _ = filter_.SetInput(image)
+    _ = filter_.SetRadius(int(radius))
+    _ = filter_.SetMaximumNumberOfIterations(int(max_iter))
+    _ = filter_.SetBackgroundValue(bkg_val)
+    _ = filter_.SetForegroundValue(fgr_val)
+    _ = filter_.SetMajorityThreshold(majority_threshold)
+
+    return filter_
+
+
+
+def distance_map(image, image_spacing = True) :
+    '''
+    '''
+    ImageType = itk.Image[itk.UC, 3]
+
+    distance = itk.DanielssonDistanceMapImageFilter[ImageType, ImageType].New()
+    _ = distance.SetUseImageSpacing(image_spacing)
+    _ = distance.SetInput(image)
+    return distance
+
+
 # TODO add unshapr mask imgea filter
-#TODO add slice by slice  connected compoenents, will be temporary
+
+
+# TEMP the connected_filter_slice_by_slice is an abomination, must be replaced
+# with a better implementation, which will use the itk suitable filter for the
+# sake of coherence
+def connected_filter_slice_by_slice(image) :
+    '''
+    Temporary implementation. This function is an abomination, must be replaced
+    with a better implemented one, which will be use the itk suitable filters
+    sake of coherence
+    '''
+    t, info = image2array(image)
+    out = np.empty(t.shape)
+
+    for i, im in enumerate(t) :
+        img = itk.GetImageFromArray(im)
+        img = cast_image(img, itk.UC)
+        filter_ = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2], itk.Image[itk.UC, 2]].New()
+        _ = filter_.SetInput(img)
+        _ = filter_.Update()
+        cc = filter_.GetOutput()
+        cc = relabel_components(cc)
+        out[i] = itk.GetArrayFromImage(cc)
+    out = array2image(out, info)
+
+    return out
+
+
+
+def add(im1, im2) :
+
+    arr1, info = image2array(im1)
+    arr2, _ = image2array(im2)
+
+    res = arr1 + arr2
+    res = (res > 0).astype(np.uint8)
+
+    return array2image(res, info)

@@ -54,7 +54,6 @@ class Boneness :
         #eigenvalues (the third one) iferent from zero, that because it is at
         # the denominator in the computing of one particular quantity
         eigen_abs = np.abs(eigen[:, :, :, :3])
-        print(eigen_abs.shape)
         eigen_no_null = ~np.isclose(eigen_abs[:, :, :, 2], 0)
 
         # strat the computing of he eigen quantity for the estimation of the
@@ -62,9 +61,6 @@ class Boneness :
         R_bones = np.empty(eigen_abs.shape[:-1], dtype = np.float32)
 
         det_image = np.sum(eigen_abs, axis = -1)
-        print(det_image.shape, flush = True)
-        print(self.roi.shape, flush = True)
-
 
         if self.roi is not None :
             # compute the mean only inside the region of interest
