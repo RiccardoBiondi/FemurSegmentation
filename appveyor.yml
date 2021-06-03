@@ -1,0 +1,70 @@
+
+version: 0.0.{build}
+pull_requests:
+  do_not_increment_build_number: true
+platform: x64
+
+
+image: Visual Studio 2017
+clone_folder: c:\projects\FemurSegmentation
+
+environment:
+
+  WORKSPACE: C:\projects
+
+  matrix:
+
+  - COMPILER: vs ## the compiler to use for C++ extention
+    PYTHON: "C:\\Python36-x64"
+    VERSION: 36
+    ARCH: x64
+
+  - COMPILER: vs
+    PYTHON: "C:\\Python37-x64"
+    VERSION: 37
+    ARCH: x64
+
+  - COMPILER: vs
+    PYTHON: "C:\\Python38-x64"
+    VERSION: 38
+    ARCH: x64
+
+build: off
+
+install:
+  # chack if python is correctly installed
+  - "%PYTHON%\\python.exe --version"
+#  - cd %WORKSPACE%\FemurSegmentation
+  # set up python
+  - "%PYTHON%\\python.exe -m pip install -U pip"
+  - "%PYTHON%\\python.exe -m pip install -r requirements.txt"
+   # testing libraries
+  - "%PYTHON%\\python.exe -m pip install hypothesis"
+  - "%PYTHON%\\python.exe -m pip install pytest"
+
+  # set up the C++ and cython part
+  - cinst -y ninja
+  - SET "PATH=C:\Program Files\CMake\bin;%PATH%"
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+  - git submodule -q update --init --recursive
+  - cd %WORKSPACE%\
+
+  # install a recent cmak
+  - set CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-win64-x64.zip"
+  - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
+  - 7z x cmake.zip -oC:\projects\deps > nul
+  - move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
+  - set PATH=C:\projects\deps\cmake\bin;%PATH%
+  - cmake --version
+
+
+before_installation:
+  - - cd %WORKSPACE%\FemurSegmention
+
+
+install_script:
+  - "%PYTHON%\\python.exe setup.py develop --user"
+
+test_script:
+  -  "%PYTHON%\\Scripts\\pytest.exe" # ??
+  - exit 0

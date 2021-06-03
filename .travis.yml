@@ -1,0 +1,97 @@
+language: cpp
+
+matrix:
+  include:
+
+
+    - os: linux
+      compiler: gcc
+      name: ubuntu 20.04 - native
+      dist: focal
+      sudo: true
+
+      addons:
+        apt:
+          update: True
+          sources:
+            - ubuntu-tollchain-r-test
+          packages:
+            - python3.8
+            - python3-pip
+            - python3-setuptools
+      env:
+        - MATRIX_EVAL=""
+
+    - os: linux
+      compiler: gcc
+      name: ubuntu 20.04 - gcc@8.0
+      dist: focal
+      sudo: true
+
+      addons:
+        apt:
+          update: True
+          sources:
+            - ubuntu-tollchain-r-test
+          packages:
+            - g++-8
+            - python3.8
+            - python3-pip
+            - python3-setuptools
+      env:
+        - MATRIX_EVAL=""
+
+    - os: linux
+      compiler: gcc
+      name: ubuntu 20.04 - gcc@9.0
+      dist: focal
+      sudo: true
+
+      addons:
+        apt:
+          update: True
+          sources:
+            - ubuntu-tollchain-r-test
+          packages:
+            - g++-9
+            - python3.8
+            - python3-pip
+            - python3-setuptools
+      env:
+        - MATRIX_EVAL=""
+
+before_install:
+  - travis_retry eval "${MATRIX_EVAL}"
+    #- pip install -r requirements.txt
+  - python3 --version
+  - python3 -m pip install --upgrade pip --user
+  - python3 -m pip --version
+  - python3 -m pip installe -r --user requirements.txt
+
+  # testing libraries
+  - python -m pip install pytest==3.0.7
+  - python -m pip install hypothesis>=4.13.0
+  - python -m pip install codecov
+  - python -m pip install pytest-cov
+
+install:
+    # CMake upgrade
+
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then wget --no-check-certificate https://cmake.org/files/v3.13/cmake-3.13.1-Darwin-x86_64.tar.gz   ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then tar -xzf cmake-3.13.1-Darwin-x86_64.tar.gz                                                    ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then export PATH=$PWD/cmake-3.13.1-Darwin-x86_64/CMake.app/Contents/bin:$PATH                      ;fi
+
+  ###############################################################################################################################################
+
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] && [[ "$COMPILER_ID" == "gcc" ]]; then wget --no-check-certificate https://cmake.org/files/v3.13/cmake-3.13.1-Linux-x86_64.tar.gz    ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] && [[ "$COMPILER_ID" == "gcc" ]]; then tar -xzf cmake-3.13.1-Linux-x86_64.tar.gz                                                     ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] && [[ "$COMPILER_ID" == "gcc" ]]; then export PATH=$PWD/cmake-3.13.1-Linux-x86_64/bin:$PATH                                          ;fi
+
+
+script:
+  - python setup.py develop --user
+  # execute the tests and get the coverage!!
+  - travis_wait 25 python -m pytest --cov=FemurSegmentation --cov-config=.coveragerc
+
+after_succes:
+  - codecov
