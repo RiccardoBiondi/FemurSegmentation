@@ -399,3 +399,19 @@ def add(im1, im2) :
     res = (res > 0).astype(np.uint8)
 
     return array2image(res, info)
+
+
+
+def apply_pipeline_slice_by_slice(image, pipeline, dimension = 2, out_type = None) :
+    ''' 
+    '''
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+
+
+    filter_ = itk.SliceBySliceImageFilter[ImageType, ImageType].New()
+    _ = filter_.SetInput(image)
+    _ = filter_.SetFilter(pipeline)
+    _ = filter_.SetDimension(dimension)
+
+    return filter_

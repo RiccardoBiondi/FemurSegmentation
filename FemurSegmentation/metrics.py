@@ -74,3 +74,22 @@ class SimilarityMeasures :
         }
 
         return metrics
+
+
+
+def housdorff_distance(image1, image2) :
+    '''
+    '''
+    PixelType1, Dim1 = itk.template(image1)[1]
+    PixelType2, Dim2 = itk.template(image2)[1]
+
+    ImageType1 = itk.Image[PixelType1, Dim1]
+    ImageType2 = itk.Image[PixelType2, Dim2]
+
+
+    hd = itk.HausdorffDistanceImageFilter[ImageType1, ImageType2].New()
+    _ = hd.SetInput1(image1)
+    _ = hd.SetInput2(image2)
+    _ = hd.Update()
+
+    return hd.GetHausdorffDistance()
