@@ -363,32 +363,6 @@ def distance_map(image, image_spacing = True) :
 # TODO add unshapr mask imgea filter
 
 
-# TEMP the connected_filter_slice_by_slice is an abomination, must be replaced
-# with a better implementation, which will use the itk suitable filter for the
-# sake of coherence
-def connected_filter_slice_by_slice(image) :
-    '''
-    Temporary implementation. This function is an abomination, must be replaced
-    with a better implemented one, which will be use the itk suitable filters
-    sake of coherence
-    '''
-    t, info = image2array(image)
-    out = np.empty(t.shape)
-
-    for i, im in enumerate(t) :
-        img = itk.GetImageFromArray(im)
-        img = cast_image(img, itk.UC)
-        filter_ = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2], itk.Image[itk.UC, 2]].New()
-        _ = filter_.SetInput(img)
-        _ = filter_.Update()
-        cc = filter_.GetOutput()
-        cc = relabel_components(cc)
-        out[i] = itk.GetArrayFromImage(cc)
-    out = array2image(out, info)
-
-    return out
-
-
 
 def add(im1, im2) :
 
@@ -403,7 +377,7 @@ def add(im1, im2) :
 
 
 def apply_pipeline_slice_by_slice(image, pipeline, dimension = 2, out_type = None) :
-    ''' 
+    '''
     '''
     PixelType, Dim = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dim]

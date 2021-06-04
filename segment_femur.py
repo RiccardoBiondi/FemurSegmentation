@@ -16,9 +16,9 @@ from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import relabel_components
 from FemurSegmentation.filters import execute_pipeline
 from FemurSegmentation.filters import iterative_hole_filling
-from FemurSegmentation.filters import connected_filter_slice_by_slice
 from FemurSegmentation.filters import distance_map
 from FemurSegmentation.filters import add
+from FemurSegmentation.filters import apply_pipeline_slice_by_slice
 
 from FemurSegmentation.image_splitter import LegImages
 from FemurSegmentation.boneness import Boneness
@@ -66,7 +66,12 @@ def parse_args() :
 
 
 
-def pre_processing(image) :
+def pre_processing(image, roi_lower_thr = -100,
+                    bkg_lower_thr = - 100,
+                    bkg_upper_thr = -25,
+                    obj_thr_gl = 600,
+                    obj_thr_bones = 0.3,
+                    scale = [1.]) :
     '''
     Pre process the image and estimate the ROI in which compute the graph,
     the object and background voxels to set the Source and Sink tLinks
@@ -74,16 +79,16 @@ def pre_processing(image) :
     print("\tI am pre-processing...", flush = True)
 
     # find the ROI
-    ROI = binary_threshold(image, 3000, -100, out_type = itk.UC)
+    ROI = binary_threshold(image, 3000, roi_lower_thr, out_type = itk.UC)
 
     # compute the boneness measure
-    bones = Boneness(image, [1.], ROI)
+    bones = Boneness(image, scale, ROI)
     boneness = bones.computeBonenessMeasure()
     boneness, _ = image2array(boneness)
 
     # find background
     # TODO Improve background condition
-    bkg = binary_threshold(image, -25, -100, out_type = itk.UC)
+    bkg = binary_threshold(image, bkg_upper_thr, bkg_lower_thr, out_type = itk.UC)
 
     # to find the object it will combine the threshold information, which select
     # only the bones region, the boneness measure which allows to separate the
@@ -91,7 +96,7 @@ def pre_processing(image) :
     # the femur
     obj, info = image2array(image)
 
-    cond = (obj > 600) & (boneness > 0.3)
+    cond = (obj > obj_thr_gl) & (boneness > obj_thr_bones)
     obj[cond] = 1
     obj[~cond] = 0
 
@@ -111,14 +116,14 @@ def pre_processing(image) :
 
 
 
-def segmentation(image, obj, bkg, ROI) :
+def segmentation(image, obj, bkg, ROI, scales = [.5, 1.], sigma = .25, Lambda = 100) :
 
     _, info = image2array(image)
     # compute multiscale boneness
-    bones = Boneness(image, [0.5, 1.], ROI)
+    bones = Boneness(image, scales, ROI)
     boneness = bones.computeBonenessMeasure()
     # compute links
-    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg)
+    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg, sigma = sigma, Lambda = Lambda)
     cost_sink_flatten, cost_source_flatten, cost_vx, CentersVx, NeighborsVx, _totalNeighbors, costFromCenter, costToCenter = gc_links.getLinks()
     # apply graph cut
     uint_gcresult = RunGraphCut(gc_links.total_vx,
@@ -142,7 +147,6 @@ def segmentation(image, obj, bkg, ROI) :
 
 
 
-
 def post_processing(labeled) :
     '''
     Fill the labeled image. Get only the femur
@@ -158,8 +162,12 @@ def post_processing(labeled) :
     filler = iterative_hole_filling(filled, max_iter = 5, radius = 3)
     pipe = distance_map(filler.GetOutput())
     dist = execute_pipeline(pipe)
+    dist = binary_threshold(dist, 25, 0, out_type = itk.UC)
 
-    negative = connected_filter_slice_by_slice(dist)
+    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2], itk.Image[itk.UC, 2]].New()
+
+    negative = apply_pipeline_slice_by_slice(dist, negative)
+    negative = execute_pipeline(negative)
     negative = binary_threshold(negative, 700, 1)
 
     filled = add(filled, negative)
@@ -174,7 +182,6 @@ def post_processing(labeled) :
     filled = binary_threshold(rel, 2, 0, out_type = itk.UC)
 
     return filled
-
 
 
 def main(image) :
