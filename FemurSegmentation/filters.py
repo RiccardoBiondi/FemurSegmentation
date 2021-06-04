@@ -7,7 +7,9 @@ from FemurSegmentation.utils import image2array, array2image, cast_image
 __author__ = ['Riccardo Biondi']
 __email__  = ['riccardo.biondi7@unibo.it']
 
-
+# TODO allows a customize InputType, not only retrive it from the current image
+# TODO allows to not alwaise set the input when you define a filter. This
+# will help with the application slice by slice
 
 def binary_threshold(image, upper_thr, lower_thr,
                      in_value = 1, out_val = 0, out_type = None) :
@@ -389,3 +391,36 @@ def apply_pipeline_slice_by_slice(image, pipeline, dimension = 2, out_type = Non
     _ = filter_.SetDimension(dimension)
 
     return filter_
+
+
+
+def label_image2shape_label_map(image,
+                                bkg = 0,
+                                compute_perimeter = False,
+                                compute_feret_diameter = False,
+                                compute_oriented_bounding_box = False) :
+
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+    LabelType = itk.StatisticsLabelObject[itk.UL, Dim]
+    LabelMapType = itk.LabelMap[LabelType]
+    shape = itk.LabelImageToShapeLabelMapFilter[itk.Image[itk.UC, 3], LabelMapType].New()
+    _ = shape.SetInput(image)
+    _ = shape.SetComputePerimeter(compute_perimeter)
+    _ = shape.SetComputeFeretDiameter(compute_feret_diameter)
+    _ = shape.SetComputeOrientedBoundingBox(compute_oriented_bounding_box)
+
+    return shape
+
+
+
+def region_of_interest(image, region) :
+
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+
+    roi = itk.RegionOfInterestImageFilter[ImageType, ImageType].New()
+    _ = roi.SetInput(image)
+    _ = roi.SetRegionOfInterest(region)
+
+    return roi
