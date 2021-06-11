@@ -1,5 +1,8 @@
-itk==5.2.0
+itk==5.1.0
 numpy
 matplotlib
 scikit-optimize
 cython
+pandas
+scikit-learn
+ipython
