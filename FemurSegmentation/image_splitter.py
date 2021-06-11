@@ -6,9 +6,7 @@
 import itk
 import numpy as np
 
-from FemurSegmentation.utils import cast_image
-from FemurSegmentation.utils import array2image
-from FemurSegmentation.utils import image2array
+from FemurSegmentation.filters import cast_image
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import region_of_interest
@@ -58,20 +56,22 @@ class LegImages :
 
     def get_legs(self) :
 
-        binarized = binary_threshold(self.image, 3000, -400, out_type = itk.UC)
-        pipeline = connected_components(binarized, itk.UC)
-        pipeline = label_image2shape_label_map(pipeline.GetOutput())
+        binarized = binary_threshold(self.image, 3000, -400, out_type = itk.US)
+        cc = connected_components(binarized, itk.US)
+        #cc_im = execute_pipeline(cc)
+        #cc_im = cast_image(cc_im, itk.US)
+        pipeline = label_image2shape_label_map(cc.GetOutput())
         label_map = execute_pipeline(pipeline)
 
         bbox = label_map.GetNthLabelObject(0).GetBoundingBox()
 
         region1, region2 = self.define_regions(bbox)
-        leg1 = region_of_interest(self.image, region1)
-        leg2 = region_of_interest(self.image, region2)
+        leg1 = execute_pipeline(region_of_interest(self.image, region1))
+        leg2 = execute_pipeline(region_of_interest(self.image, region2))
 
         if self.mask is not None :
-            msk1 = region_of_interest(self.mask, region1)
-            msk2 = region_of_interest(self.mask, region2)
+            msk1 = execute_pipeline(region_of_interest(self.mask, region1))
+            msk2 = execute_pipeline(region_of_interest(self.mask, region2))
 
             return (leg1, msk1), (leg2, msk2)
 
