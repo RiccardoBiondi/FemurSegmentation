@@ -24,6 +24,8 @@ from FemurSegmentation.filters import hessian_matrix
 from FemurSegmentation.filters import get_eigenvalues_map
 from FemurSegmentation.filters import connected_components #TODO test me
 from FemurSegmentation.filters import relabel_components # TODO test me
+from FemurSegmentation.filters import unsharp_mask
+from FemurSegmentation.filters import normalize_image_gl
 
 
 
@@ -239,3 +241,89 @@ def test_eigenvalues(image, sigma, order ) :
     # computer eps
     assert np.all(np.isclose(arr1, arr2))
     assert info1 == info2
+
+
+@given(random_image_strategy(),
+    st.floats(0.2, 1.5),
+    st.floats(0.2, 2.5),
+    st.floats(0., 15.))
+@settings(max_examples=20, deadline=None,
+          suppress_health_check=(HC.too_slow, ))
+def test_unsharp_mask_initialization(image, sigma, amount, thr):
+    '''
+    Given:
+        - itk.Image
+        - sigma
+        - amount
+        - threshold
+    Then:
+        - Initialize the unsharp mask filter
+    Assert:
+        - Values correctly initialized
+    '''
+    um = unsharp_mask(image, sigma, amount, thr)
+    in_image, in_info = image2array(image)
+    set_image, set_info = image2array(um.GetInput())
+
+    assert np.all(np.isclose(set_image, in_image))
+    assert set_info == in_info
+    assert np.isclose(sigma, *um.GetSigmas())
+    assert np.isclose(amount, um.GetAmount())
+    assert np.isclose(thr, um.GetThreshold())
+
+
+@given(random_image_strategy())
+@settings(max_examples=20, deadline=None,
+          suppress_health_check=(HC.too_slow, ))
+def test_normalize_gl_wo_roi(image):
+    '''
+    Given:
+        - itk.Image
+    Then:
+        - normalize according to mean and standard deviation
+    Assert:
+        - image info are preserved
+        - out image GL mean is close to 0
+        - out image GL std dev is close to 1
+    '''
+    normalized = normalize_image_gl(image)
+    _, in_info = image2array(image)
+    out_arr, out_info = image2array(normalized)
+
+    assert in_info == out_info
+    assert np.isclose(np.mean(out_arr), 0., atol = 1e-7)
+    assert np.isclose(np.std(out_arr), 1.,  atol = 1e-7)
+
+
+@given(random_image_strategy(), st.integers(20, 30), st.integers(200, 250))
+@settings(max_examples=20, deadline=None,
+          suppress_health_check=(HC.too_slow, ))
+def test_normalize_gl_w_roi(image, lower, upper):
+    '''
+    Given:
+        - itk.Image
+        - uppert threshold value
+        - lower threshold value
+    Then:
+        - apply a inary threshold to find a ROI
+        - normaize the input image according to the mean and std deviation
+            inside the ROI
+    Assert:
+        - image info are preserved
+        - the mean inside the ROI is close to zero
+        - the std dev inside the ROI in close to 1
+        - mean and std dev of the whole image are different from the one
+        inside the ROI
+    '''
+    roi = binary_threshold(image, upper, lower)
+    normaized = normalize_image_gl(image, roi)
+
+    _, info = image2array(image)
+    out_arr, out_info = image2array(normaized)
+    r, _ = image2array(roi)
+
+    assert out_info == info
+    assert np.isclose(np.mean(out_arr[r == 1]), 0.,  atol = 1e-7)
+    assert np.isclose(np.std(out_arr[r == 1]), 1.,  atol = 1e-7)
+    assert ~np.isclose(np.mean(out_arr[r == 1]), np.mean(out_arr))
+    assert ~np.isclose(np.std(out_arr[r == 1]), np.std(out_arr))

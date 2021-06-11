@@ -350,7 +350,6 @@ def iterative_hole_filling(image, max_iter = 25, radius = 10,
     return filter_
 
 
-
 def distance_map(image, image_spacing = True) :
     '''
     '''
@@ -362,8 +361,31 @@ def distance_map(image, image_spacing = True) :
     return distance
 
 
-# TODO add unshapr mask imgea filter
+def unsharp_mask(image, sigma=1., amount=1., threhsold=0.):
+    '''
+    Initilize the Unsharp masking filter
+    Parameters
+    ----------
+    image: itk.Image
+        image to unsharp
+    sigma: float
 
+    amout: float
+
+    threshold: float
+
+    Return
+    ------
+
+    '''
+    ImageType = itk.Image[itk.template(image)[1]]
+    um = itk.UnsharpMaskImageFilter[ImageType, ImageType].New()
+    _ = um.SetInput(image)
+    _ = um.SetSigma(sigma)
+    _ = um.SetAmount(amount)
+    _ = um.SetThreshold(threhsold)
+
+    return um
 
 
 def add(im1, im2) :
@@ -424,3 +446,49 @@ def region_of_interest(image, region) :
     _ = roi.SetRegionOfInterest(region)
 
     return roi
+
+
+def normalize_image_gl(image, roi = None, label = 1):
+    '''
+    Normalize voxel GL according to their mean and standard deviation.
+    If mask is provided, the filter will rescale the GL according of the mean
+    ans std deviation of the region specifiend by the mask
+    Notice that mask must be binary ([0, 1], ImageType = [itk.UC, ImageDim])
+    and must have the same shape of the input image
+
+    Parameter
+    ---------
+    image: itk.Image
+        image to normalize
+    roi: itk.Image
+        binary image. If provided, will normalize the input image according
+        of the mean and std deviation of the specified region
+    label: int, default 1
+        value of the GL corresponding to the region of interest
+    Return
+    ------
+    normalizer: itk.NormalizeImageFilter
+        Normalize image filter, initialized but not updated
+
+    .. note: Will raise ZeroDivisionError if the provided image have constant GL
+    '''
+    # TODO this implementation is not so good, it must be replaced with a
+    # better one
+    arr,info = image2array(image)
+
+    if roi is not None:
+        roi_arr, _ = image2array(roi)
+        # check roi shape
+        if roi_arr.shape != arr.shape :
+            raise ValueError("roi image shape: {} doesn't match the \
+                             image one : {}".format(roi_arr.shape, arr.shape))
+        mean = np.mean(arr[roi_arr == label])
+        std = np.std(arr[roi_arr == label])
+    else :
+        mean = np.mean(arr)
+        std = np.std(arr)
+
+    # now shif the image and rescale according to std
+    arr = np.float32(arr - mean) / np.float32(std)
+
+    return array2image(arr, info)
