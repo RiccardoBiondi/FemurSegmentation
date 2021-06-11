@@ -25,7 +25,7 @@ class GraphCutLinks :
         self.vx_id[self.roi != 0] = range(self.total_vx)
 
         self.sigma = sigma
-        self.Lambda = Lambda
+        self.Lambda = float(Lambda)
 
     def bonenessCost(self, vx_left, vx_right, sh_left, sh_right) :
         '''
@@ -36,7 +36,7 @@ class GraphCutLinks :
         from_center = np.full(vx_left[cond].shape, self.Lambda)
         to_center = np.full(vx_left[cond].shape, self.Lambda)
 
-        den = 2 * (self.sigma ** 2)
+        den = 2. * (self.sigma ** 2)
         num = np.abs(sh_left[cond] - sh_right[cond])**2
 
         # compute cost from center

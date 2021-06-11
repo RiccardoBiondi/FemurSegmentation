@@ -404,7 +404,7 @@ def label_image2shape_label_map(image,
     ImageType = itk.Image[PixelType, Dim]
     LabelType = itk.StatisticsLabelObject[itk.UL, Dim]
     LabelMapType = itk.LabelMap[LabelType]
-    shape = itk.LabelImageToShapeLabelMapFilter[itk.Image[itk.UC, 3], LabelMapType].New()
+    shape = itk.LabelImageToShapeLabelMapFilter[ImageType, LabelMapType].New()
     _ = shape.SetInput(image)
     _ = shape.SetComputePerimeter(compute_perimeter)
     _ = shape.SetComputeFeretDiameter(compute_feret_diameter)

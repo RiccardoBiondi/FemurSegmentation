@@ -147,9 +147,11 @@ def get_labeled_leg(leg1, leg2) :
     l1 = itk.GetArrayFromImage(leg1[1])
     l2 = itk.GetArrayFromImage(leg2[1])
     if np.sum(l1) != 0 :
+
         return leg1
 
-    elif np.sum(l2 != 0) :
+    elif np.sum(l2) != 0 :
+
         return leg2
     else :
         raise ValueError('No label found')
