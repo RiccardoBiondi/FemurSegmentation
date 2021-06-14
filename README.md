@@ -72,7 +72,7 @@ export PYTHONPATH=$PYTHONPATH:~/FemurSegmentation/lib/
 
 or for windows users:
 ```console
-set PYTHONPATH=%PYTHONPATH%;C:\path\to\FemurSegmentation\lib\
+set PYTHONPATH=PYTHONPATH;"C:\path\to\FemurSegmentation\lib\"
 ```
 To run the unsupervised segmentation:
 ```console

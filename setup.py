@@ -2,7 +2,6 @@
 # !/usr/bin/env python
 
 # python setup.py develop --user
-# cython distance_matrix.pyx -a
 
 import os
 import platform
@@ -86,11 +85,12 @@ DESCRIPTION = ''
 URL = ''
 EMAIL = ['']
 AUTHOR = ['']
-REQUIRES_PYTHON = '>=3.5'
+REQUIRES_PYTHON = '>=3.6'
 VERSION = '0.0.1'
 KEYWORDS = ""
 
 CPP_COMPILER = platform.python_compiler()
+print(CPP_COMPILER, flush=True)
 README_FILENAME = os.path.join(os.getcwd(), 'README.md')
 REQUIREMENTS_FILENAME = os.path.join(here, 'requirements.txt')
 # VERSION_FILENAME =
@@ -121,7 +121,7 @@ if 'GCC' in CPP_COMPILER or 'Clang' in CPP_COMPILER:
                    '-Wno-parentheses',
                    '-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
 elif 'MSC' in CPP_COMPILER:
-    cpp_compiler_args = ['/std:c++latest',
+    cpp_compiler_args = ['/std:c++11',
                        '-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
     compile_args = []
 else:
