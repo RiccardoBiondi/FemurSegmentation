@@ -166,10 +166,10 @@ def post_processing(labeled):
     filler = iterative_hole_filling(filled, max_iter=5, radius=1)
     pipe = distance_map(filler.GetOutput())
     dist = execute_pipeline(pipe)
-    dist = binary_threshold(dist, 25, 0, out_type=itk.UC)
+    dist = binary_threshold(dist, 25, 0, out_type=itk.SS)
 
-    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2],
-                                                itk.Image[itk.UC, 2]].New()
+    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.SS, 2],
+                                                itk.Image[itk.SS, 2]].New()
 
     negative = apply_pipeline_slice_by_slice(dist, negative)
     negative = execute_pipeline(negative)

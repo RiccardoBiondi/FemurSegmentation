@@ -33,6 +33,7 @@ class GraphCutLinks :
 
         self.sigma = sigma
         self.Lambda = float(Lambda)
+        self.bone_ms_thr = bone_ms_thr
 
     def bonenessCost(self, vx_left, vx_right, sh_left, sh_right) :
         '''
@@ -62,7 +63,7 @@ class GraphCutLinks :
         cond = (self.obj == 1) & (self.roi == 1)
         cost_source[cond] = self.Lambda
 
-        cond = (self.obj == 0) & (self.roi == 1) & (self.boneness > bone_ms_thr) & (self.bkg == 0)
+        cond = (self.obj == 0) & (self.roi == 1) & (self.boneness > self.bone_ms_thr) & (self.bkg == 0)
         cost_source[cond] = 1
 
         return cost_source

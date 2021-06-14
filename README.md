@@ -70,9 +70,9 @@ Make sure to add `/FemurSegmentation/lib` to your python library before running.
 export PYTHONPATH=$PYTHONPATH:~/FemurSegmentation/lib/
 ```
 
-or for windows users:
+or for windows users()from PowerShell:
 ```console
-set PYTHONPATH=PYTHONPATH;"C:\path\to\FemurSegmentation\lib\"
+$env:PYTHONPATH="C:\path\to\FemurSegmentation\lib\"
 ```
 To run the unsupervised segmentation:
 ```console
