@@ -1,7 +1,5 @@
-import os
 import itk
 import argparse
-import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -29,19 +27,21 @@ from FemurSegmentation.links import GraphCutLinks
 
 from GraphCutSupport import RunGraphCut
 
+
 def view(image, idx) :
 
     arr = itk.GetArrayFromImage(image)
 
-    fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize = (10, 10))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
     _ = ax.axis('off')
-    _ = ax.imshow(arr[idx], cmap = 'gray')
+    _ = ax.imshow(arr[idx], cmap='gray')
 
     plt.show()
 
+
 def parse_args() :
     description = 'A GraphCut based framework for the femur segmentation'
-    parser = argparse.ArgumentParser(description = description)
+    parser = argparse.ArgumentParser(description=description)
 
     _ = parser.add_argument('--input',
                             dest='input',
@@ -66,22 +66,22 @@ def parse_args() :
 
 
 def pre_processing(image, roi_lower_thr=-100,
-                    bkg_lower_thr=0.0,
-                    bkg_upper_thr=0.5,
-                    obj_thr_gl=1.2,
-                    obj_thr_bones=0.3,
-                    scale = [1.],
-                    sigma=1.,
-                    amount=1.,
-                    thr=0.) :
+                bkg_lower_thr=0.0,
+                bkg_upper_thr=0.5,
+                obj_thr_gl=1.2,
+                obj_thr_bones=0.3,
+                scale=[1.],
+                sigma=1.,
+                amount=1.,
+                thr=0.) :
     '''
     Pre process the image and estimate the ROI in which compute the graph,
     the object and background voxels to set the Source and Sink tLinks
     '''
-    print("\tI am pre-processing...", flush = True)
+    print("\tI am pre-processing...", flush=True)
 
     # find the ROI
-    ROI = binary_threshold(image, 3000, roi_lower_thr, out_type = itk.UC)
+    ROI = binary_threshold(image, 3000, roi_lower_thr, out_type=itk.UC)
 
     # normalize the image inside the ROI
     normalized = normalize_image_gl(image, ROI)
@@ -113,33 +113,34 @@ def pre_processing(image, roi_lower_thr=-100,
     cc = connected_components(obj)
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
-    obj = binary_threshold(rel, 2, 0, out_type = itk.UC)
+    obj = binary_threshold(rel, 2, 0, out_type=itk.UC)
 
     boneness = array2image(boneness, info)
 
     return unsharped, ROI, bkg, obj
 
 
-def segmentation(image, obj, bkg, ROI, scales = [.5, 1.], sigma = .25, Lambda = 100, bone_ms_thr=0.2) :
+def segmentation(image, obj, bkg, ROI, scales=[.5, 1.], sigma=.25,
+                Lambda=100, bone_ms_thr=0.2) :
 
     _, info = image2array(image)
     # compute multiscale boneness
     bones = Boneness(image, scales, ROI)
     boneness = bones.computeBonenessMeasure()
     # compute links
-    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg, sigma = sigma, Lambda = Lambda, bone_ms_thr = bone_ms_thr)
+    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg, sigma=sigma,
+                            Lambda=Lambda, bone_ms_thr=bone_ms_thr)
     cost_sink_flatten, cost_source_flatten, cost_vx, CentersVx, NeighborsVx, _totalNeighbors, costFromCenter, costToCenter = gc_links.getLinks()
     # apply graph cut
     uint_gcresult = RunGraphCut(gc_links.total_vx,
-                                              np.ascontiguousarray(cost_vx, dtype=np.uint32),
-                                              np.ascontiguousarray(cost_source_flatten, dtype=np.uint32),
-                                              np.ascontiguousarray(cost_sink_flatten, dtype=np.uint32),
-                                              _totalNeighbors,
-                                              np.ascontiguousarray(CentersVx, dtype=np.uint32),
-                                              np.ascontiguousarray(NeighborsVx, dtype=np.uint32),
-                                              np.ascontiguousarray(costFromCenter, dtype=np.uint32),
-                                              np.ascontiguousarray(costToCenter, dtype=np.uint32)
-                                              )
+                                np.ascontiguousarray(cost_vx, dtype=np.uint32),
+                                np.ascontiguousarray(cost_source_flatten, dtype=np.uint32),
+                                np.ascontiguousarray(cost_sink_flatten, dtype=np.uint32),
+                                _totalNeighbors,
+                                np.ascontiguousarray(CentersVx, dtype=np.uint32),
+                                np.ascontiguousarray(NeighborsVx, dtype=np.uint32),
+                                np.ascontiguousarray(costFromCenter, dtype=np.uint32),
+                                np.ascontiguousarray(costToCenter, dtype=np.uint32))
 
     labelIdImage = gc_links.vx_id
     labelIdImage[gc_links.vx_id != -1] = uint_gcresult
@@ -150,23 +151,22 @@ def segmentation(image, obj, bkg, ROI, scales = [.5, 1.], sigma = .25, Lambda = 
     return labeled
 
 
-
-def post_processing(labeled) :
+def post_processing(labeled):
     '''
     Fill the labeled image. Get only the femur
     '''
 
     # get the largest component (femur)
     filled = cast_image(labeled, itk.US)
-    cc =  connected_components(filled, itk.US)
+    cc = connected_components(filled, itk.US)
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
-    filled = binary_threshold(rel, 2, 0, out_type = itk.UC)
+    filled = binary_threshold(rel, 2, 0, out_type=itk.UC)
 
-    filler = iterative_hole_filling(filled, max_iter = 5, radius = 1)
+    filler = iterative_hole_filling(filled, max_iter=5, radius=1)
     pipe = distance_map(filler.GetOutput())
     dist = execute_pipeline(pipe)
-    dist = binary_threshold(dist, 25, 0, out_type = itk.UC)
+    dist = binary_threshold(dist, 25, 0, out_type=itk.UC)
 
     negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2],
                                                 itk.Image[itk.UC, 2]].New()
@@ -177,14 +177,14 @@ def post_processing(labeled) :
 
     filled = add(filled, negative)
 
-    filler = iterative_hole_filling(filled, max_iter = 10, radius = 1)
+    filler = iterative_hole_filling(filled, max_iter=10, radius=1)
     filled = execute_pipeline(filler)
 
     filled = cast_image(filled, itk.US)
     cc = connected_components(filled, itk.US)
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
-    filled = binary_threshold(rel, 2, 0, out_type = itk.UC)
+    filled = binary_threshold(rel, 2, 0, out_type=itk.UC)
 
     return filled
 
@@ -204,7 +204,7 @@ if __name__ == '__main__' :
 
     print('I am reading the image from: {}'.format(args.input), flush=True)
     reader = ImageReader(args.input, itk.Image[itk.F, 3])
-    image =reader.read()
+    image = reader.read()
 
     # this part is because the dataset we are used has only one labeled
     # leg. This allow us to discriminate between the labeled and unlabeled one
@@ -230,5 +230,4 @@ if __name__ == '__main__' :
 
     print('wrote')
 
-
-    # now reconstruct the original image
+    # TODO reconstruct the original image
