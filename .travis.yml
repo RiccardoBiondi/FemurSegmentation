@@ -66,7 +66,7 @@ before_install:
   - python3 --version
   - python3 -m pip install --upgrade pip --user
   - python3 -m pip --version
-  - python3 -m pip install -r --user requirements.txt
+  - python3 -m pip install -r requirements.txt --user 
 
   # testing libraries
   - python -m pip install pytest==3.0.7
