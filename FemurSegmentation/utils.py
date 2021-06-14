@@ -156,9 +156,6 @@ def get_labeled_leg(leg1, leg2) :
     else :
         raise ValueError('No label found')
 
-# TODO slice_by_slice_decorator
-# TODO is_defined decorator
-# TODO execute_itk_pipeline
 # TODO apply_mask
 # TODO elementwise_multiplication
 # TODO image_addition

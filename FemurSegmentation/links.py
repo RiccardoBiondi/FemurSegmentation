@@ -10,7 +10,15 @@ __email__  = ['riccardo.biondi7@unibo.it']
 
 class GraphCutLinks :
 
-    def __init__(self, image, boneness, roi, obj, bkg, sigma = .25, Lambda = 100.) :
+    def __init__(self,
+                image,
+                boneness,
+                roi,
+                obj,
+                bkg,
+                sigma = .25,
+                Lambda = 50.,
+                bone_ms_thr=0.2) :
         '''
         '''
 
@@ -55,7 +63,7 @@ class GraphCutLinks :
         cond = (self.obj == 1) & (self.roi == 1)
         cost_source[cond] = self.Lambda
 
-        cond = (self.obj == 0) & (self.roi == 1) & (self.boneness > .2) & (self.bkg == 0)
+        cond = (self.obj == 0) & (self.roi == 1) & (self.boneness > bone_ms_thr) & (self.bkg == 0)
         cost_source[cond] = 1
 
         return cost_source

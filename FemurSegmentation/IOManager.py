@@ -3,7 +3,7 @@ import itk
 import numpy as np
 
 __author__ = ['Biondi Riccardo']
-__email__ = ['riccardo.biondi4@studio.unibo.it']
+__email__ = ['riccardo.biondi7@unibo.it']
 
 
 

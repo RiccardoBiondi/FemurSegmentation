@@ -19,6 +19,9 @@ from FemurSegmentation.filters import iterative_hole_filling
 from FemurSegmentation.filters import distance_map
 from FemurSegmentation.filters import add
 from FemurSegmentation.filters import apply_pipeline_slice_by_slice
+from FemurSegmentation.filters import normalize_image_gl
+from FemurSegmentation.filters import unsharp_mask
+
 
 from FemurSegmentation.image_splitter import LegImages
 from FemurSegmentation.boneness import Boneness
@@ -46,14 +49,12 @@ def parse_args() :
                             type=str,
                             action='store',
                             help='Path to the input image')
-
     _ = parser.add_argument('--output',
                             dest='output',
                             required=True,
                             type=str,
                             action='store',
                             help='path to the output folder')
-
     _ = parser.add_argument('--mask_path',
                             dest='mask_path',
                             required=False,
@@ -61,17 +62,18 @@ def parse_args() :
                             default='')
     args = parser.parse_args()
 
-
     return args
 
 
-
-def pre_processing(image, roi_lower_thr = -100,
-                    bkg_lower_thr = - 100,
-                    bkg_upper_thr = -25,
-                    obj_thr_gl = 600,
-                    obj_thr_bones = 0.3,
-                    scale = [1.]) :
+def pre_processing(image, roi_lower_thr=-100,
+                    bkg_lower_thr=0.0,
+                    bkg_upper_thr=0.5,
+                    obj_thr_gl=1.2,
+                    obj_thr_bones=0.3,
+                    scale = [1.],
+                    sigma=1.,
+                    amount=1.,
+                    thr=0.) :
     '''
     Pre process the image and estimate the ROI in which compute the graph,
     the object and background voxels to set the Source and Sink tLinks
@@ -81,49 +83,51 @@ def pre_processing(image, roi_lower_thr = -100,
     # find the ROI
     ROI = binary_threshold(image, 3000, roi_lower_thr, out_type = itk.UC)
 
-    # compute the boneness measure
-    bones = Boneness(image, scale, ROI)
+    # normalize the image inside the ROI
+    normalized = normalize_image_gl(image, ROI)
+    unsharped = execute_pipeline(unsharp_mask(normalized,
+                                              sigma=sigma,
+                                              amount=amount,
+                                              threhsold=thr))
+
+    bkg = binary_threshold(unsharped,
+                           bkg_upper_thr,
+                           bkg_lower_thr,
+                           out_type=itk.UC)
+    # now compute the single scale boneness measure that will be used to
+    # determine the object
+    bones = Boneness(unsharped, scale, ROI)
     boneness = bones.computeBonenessMeasure()
     boneness, _ = image2array(boneness)
 
-    # find background
-    # TODO Improve background condition
-    bkg = binary_threshold(image, bkg_upper_thr, bkg_lower_thr, out_type = itk.UC)
-
-    # to find the object it will combine the threshold information, which select
-    # only the bones region, the boneness measure which allows to separate the
-    # joint, in the end takes the largest connected component to consider only
-    # the femur
-    obj, info = image2array(image)
-
+    obj, info = image2array(unsharped)
     cond = (obj > obj_thr_gl) & (boneness > obj_thr_bones)
     obj[cond] = 1
     obj[~cond] = 0
 
     obj = array2image(obj, info)
+
+    # now get the largest connected region, which will be(hopely) the
+    # femur region
     obj = cast_image(obj, itk.SS)
     cc = connected_components(obj)
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
     obj = binary_threshold(rel, 2, 0, out_type = itk.UC)
 
+    boneness = array2image(boneness, info)
 
-    # TODO add unsharp mask
-
-    # return unsharp masked image, ROI, obj and bkg
-
-    return ROI, bkg, obj
+    return unsharped, ROI, bkg, obj
 
 
-
-def segmentation(image, obj, bkg, ROI, scales = [.5, 1.], sigma = .25, Lambda = 100) :
+def segmentation(image, obj, bkg, ROI, scales = [.5, 1.], sigma = .25, Lambda = 100, bone_ms_thr=0.2) :
 
     _, info = image2array(image)
     # compute multiscale boneness
     bones = Boneness(image, scales, ROI)
     boneness = bones.computeBonenessMeasure()
     # compute links
-    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg, sigma = sigma, Lambda = Lambda)
+    gc_links = GraphCutLinks(image, boneness, ROI, obj, bkg, sigma = sigma, Lambda = Lambda, bone_ms_thr = bone_ms_thr)
     cost_sink_flatten, cost_source_flatten, cost_vx, CentersVx, NeighborsVx, _totalNeighbors, costFromCenter, costToCenter = gc_links.getLinks()
     # apply graph cut
     uint_gcresult = RunGraphCut(gc_links.total_vx,
@@ -159,12 +163,13 @@ def post_processing(labeled) :
     rel = relabel_components(cc_im)
     filled = binary_threshold(rel, 2, 0, out_type = itk.UC)
 
-    filler = iterative_hole_filling(filled, max_iter = 5, radius = 3)
+    filler = iterative_hole_filling(filled, max_iter = 5, radius = 1)
     pipe = distance_map(filler.GetOutput())
     dist = execute_pipeline(pipe)
     dist = binary_threshold(dist, 25, 0, out_type = itk.UC)
 
-    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2], itk.Image[itk.UC, 2]].New()
+    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2],
+                                                itk.Image[itk.UC, 2]].New()
 
     negative = apply_pipeline_slice_by_slice(dist, negative)
     negative = execute_pipeline(negative)
@@ -172,7 +177,7 @@ def post_processing(labeled) :
 
     filled = add(filled, negative)
 
-    filler = iterative_hole_filling(filled, max_iter = 5, radius = 3)
+    filler = iterative_hole_filling(filled, max_iter = 10, radius = 1)
     filled = execute_pipeline(filler)
 
     filled = cast_image(filled, itk.US)
@@ -186,8 +191,8 @@ def post_processing(labeled) :
 
 def main(image) :
 
-    ROI, bkg, obj = pre_processing(image)
-    labeled = segmentation(image, obj, bkg, ROI)
+    unsharped, ROI, bkg, obj = pre_processing(image)
+    labeled = segmentation(unsharped, obj, bkg, ROI)
     labeled = post_processing(labeled)
 
     return labeled
@@ -201,23 +206,29 @@ if __name__ == '__main__' :
     reader = ImageReader(args.input, itk.Image[itk.F, 3])
     image =reader.read()
 
-
-    # this part is used because the dataset we are used has only one labeled
+    # this part is because the dataset we are used has only one labeled
     # leg. This allow us to discriminate between the labeled and unlabeled one
     # and process only one part of the image, reducing the computational time.
     if args.mask_path != '' :
 
-        print('Mask Sepcified, I am reading the GT mask from: {}'.format(args.mask_path), flush=True)
+        print('Mask Sepcified, I am reading \
+              the GT mask from: {}'.format(args.mask_path), flush=True)
         reader = ImageReader(args.mask_path, itk.Image[itk.UC, 3])
         mask = reader.read()
 
         splitter = LegImages(image, mask)
 
-        leg1, leg2 = splitter.computeRois()
+        leg1, leg2 = splitter.get_legs()
 
         leg, _ = get_labeled_leg(leg1, leg2)
 
-    label = main(image)
+        label = main(leg)
+        print('I am writing')
+        writer = VolumeWriter(args.output, label)
+        _ = writer.write()
+        print("Done")
+
+    print('wrote')
 
 
     # now reconstruct the original image

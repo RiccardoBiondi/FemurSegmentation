@@ -1,5 +1,6 @@
 import itk
 import numpy as np
+from FemurSegmentation.utils import get_image_spatial_info, set_image_spatial_info
 
 
 __author__ = ['Riccardo Biondi']
@@ -77,15 +78,31 @@ class SimilarityMeasures :
 
 
 
+def dice_score(image1, image2) :
+    '''
+    '''
+    y_true = itk.GetArrayFromImage(image1)
+    y_pred = itk.GetArrayFromImage(image2)
+
+    den = np.sum(y_true) + np.sum(y_pred)
+
+    intersection = np.logical_and(y_true, y_pred)
+
+    num = 2 * np.sum(intersection)
+    return num / den
+
+
+
 def housdorff_distance(image1, image2) :
     '''
     '''
+
+    # FIXME I get "Image doesn't lie int same fisical space" even if is not so
     PixelType1, Dim1 = itk.template(image1)[1]
     PixelType2, Dim2 = itk.template(image2)[1]
 
     ImageType1 = itk.Image[PixelType1, Dim1]
     ImageType2 = itk.Image[PixelType2, Dim2]
-
 
     hd = itk.HausdorffDistanceImageFilter[ImageType1, ImageType2].New()
     _ = hd.SetInput1(image1)
