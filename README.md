@@ -4,7 +4,7 @@ A simple pipeline for the segmentation of femur CT scan segmentation based on Gr
 
 | **Authors**  | **Project** |  **Build Status** | **License** | **Code Quality** |
 |:------------:|:-----------:|:-----------------:|:-----------:|:----------------:|
-| [**R.Biondi**](https://github.com/RiccardoBiondi) | **FemurSegmentation** | **Windows**: **Linux**: |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
+| [**R.Biondi**](https://github.com/RiccardoBiondi) | **FemurSegmentation** | **Windows**: **Linux**: [![Build Status](https://travis-ci.com/RiccardoBiondi/FemurSegmentation.svg?token=YRvqSXwHasrnEcL9EuWP&branch=master)](https://travis-ci.com/RiccardoBiondi/FemurSegmentation) |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
 
 ## Table of Contents
 
