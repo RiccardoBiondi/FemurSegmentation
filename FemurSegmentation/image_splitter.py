@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-
 import itk
-import numpy as np
 
-from FemurSegmentation.filters import cast_image
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import region_of_interest
@@ -17,14 +13,12 @@ from FemurSegmentation.filters import execute_pipeline
 __author__ = ['Riccardo Biondi']
 __email__ = ['riccardo.biondi7@unibo.it']
 
-
-
-## Rigurada bene il metodo e uniforma i nomi!! il camel case è necessario
+# Rigurada bene il metodo e uniforma i nomi!! il camel case è necessario
 
 
 class LegImages :
 
-    def __init__(self, image, mask = None) :
+    def __init__(self, image, mask=None) :
 
         self.image = image
         self.mask = mask
@@ -37,7 +31,7 @@ class LegImages :
         start = bbox.GetIndex()
         end = bbox.GetUpperIndex() - 1
         mid_start = [int((end[0] + start[0]) / 2), start[1], start[2]]
-        mid_end =  [int((end[0] + start[0] + 1) / 2), end[1], end[2]]
+        mid_end = [int((end[0] + start[0] + 1) / 2), end[1], end[2]]
 
         # region 1
         region1 = RegionType()
@@ -49,17 +43,12 @@ class LegImages :
         _ = region2.SetIndex(mid_start)
         _ = region2.SetUpperIndex(end)
 
-
         return region1, region2
-
-
 
     def get_legs(self) :
 
-        binarized = binary_threshold(self.image, 3000, -400, out_type = itk.US)
+        binarized = binary_threshold(self.image, 3000, -400, out_type=itk.US)
         cc = connected_components(binarized, itk.US)
-        #cc_im = execute_pipeline(cc)
-        #cc_im = cast_image(cc_im, itk.US)
         pipeline = label_image2shape_label_map(cc.GetOutput())
         label_map = execute_pipeline(pipeline)
 
@@ -76,8 +65,6 @@ class LegImages :
             return (leg1, msk1), (leg2, msk2)
 
         return leg1, leg2
-
-
 
     def reconstruct_image(self) :
 

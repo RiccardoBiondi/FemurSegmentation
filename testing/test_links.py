@@ -2,18 +2,15 @@
 # -*- coding: utf-8 -*
 
 # test libraries
-import pytest
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from  hypothesis import HealthCheck as HC
+from hypothesis import HealthCheck as HC
 
 # useful libraries
-import os
 import itk
 import numpy as np
 
 # third part
-from FemurSegmentation.utils import image2array, get_image_spatial_info
 from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.boneness import Boneness
 
@@ -22,7 +19,7 @@ from FemurSegmentation.links import GraphCutLinks
 
 
 __author__ = ['Riccardo Biondi']
-__email__  = ['riccardo.biondi7@unibo.it']
+__email__ = ['riccardo.biondi7@unibo.it']
 
 
 # ███████ ████████ ██████   █████  ████████ ███████  ██████  ██ ███████ ███████
@@ -32,6 +29,7 @@ __email__  = ['riccardo.biondi7@unibo.it']
 # ███████    ██    ██   ██ ██   ██    ██    ███████  ██████  ██ ███████ ███████
 
 pixel_types = [itk.UC, itk.SS]
+
 
 @st.composite
 def binary_image_strategy(draw):
@@ -55,6 +53,7 @@ def random_image_strategy(draw):
 
     return rndImage.GetOutput()
 
+
 @st.composite
 def scales_strategy(draw) :
     len_ = draw(st.integers(1, 5))
@@ -71,12 +70,11 @@ def scales_strategy(draw) :
     #    ██    ███████ ███████    ██
 
 
-
-class TestGraphCutLinks :
+class TestGraphCutLinks:
 
     @given(random_image_strategy(), scales_strategy())
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_Init(self, image, scales) :
         '''
         Given :
@@ -112,7 +110,8 @@ class TestGraphCutLinks :
         # in this case I am using np.isclose since the data are o float type
         assert np.all(np.isclose(inImage, link.image))
         assert np.all(np.isclose(inBoneness, link.boneness))
-        # now data are of integer type, so I am not using the np.isclose function
+        # now data are of integer type, so I am not using the np.isclose
+        # function
         assert np.all(inObj == link.obj)
         assert np.all(inBkg == link.bkg)
         assert np.all(inRoi == link.roi)
@@ -121,10 +120,9 @@ class TestGraphCutLinks :
         assert link.sigma == .25
         # check number of voxels and vx_id
 
-
     @given(random_image_strategy(), st.floats(0.1, 1.5))
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_tLinkSource(self, image, scale) :
         '''
         Given:
@@ -139,8 +137,8 @@ class TestGraphCutLinks :
             - use these values to init the GraphCutLinks obj
             - compute the t-links for the source
         Assert
-            - the unique t-link values inside roi are 0, 1, 100 (correspondig to the
-                default lambda)
+            - the unique t-link values inside roi are 0, 1, 100
+                (correspondig to the default lambda)
             - the values outside ROI are empty TODO
             - the values are correctly assigned TODO
         '''
@@ -160,11 +158,9 @@ class TestGraphCutLinks :
         assert np.all(cost_source.shape == obj_arr.shape)
         assert np.all(np.unique(cost_source[roi_arr != 0]) == [0, 1, 100])
 
-
-
     @given(random_image_strategy(), st.floats(0.1, 1.5))
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_tLinkSink(self, image, scale) :
         '''
         Given:
@@ -179,8 +175,8 @@ class TestGraphCutLinks :
             - use these values to init the GraphCutLinks obj
             - compute the t-links for the source
         Assert
-            - the unique t-link values inside roi are 0, 1, 100 (correspondig to the
-                default lambda)
+            - the unique t-link values inside roi are 0, 1, 100
+                (correspondig to the default lambda)
             - the values outside ROI are empty TODO
             - the values are correctly assigned TODO
         '''

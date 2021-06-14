@@ -5,14 +5,15 @@ from FemurSegmentation.utils import image2array, array2image, cast_image
 # TODO add healt check and error/exception handling
 
 __author__ = ['Riccardo Biondi']
-__email__  = ['riccardo.biondi7@unibo.it']
+__email__ = ['riccardo.biondi7@unibo.it']
 
 # TODO allows a customize InputType, not only retrive it from the current image
 # TODO allows to not alwaise set the input when you define a filter. This
 # will help with the application slice by slice
 
+
 def binary_threshold(image, upper_thr, lower_thr,
-                     in_value = 1, out_val = 0, out_type = None) :
+                    in_value=1, out_val=0, out_type=None) :
     '''
     Return a binary image whith in_value where input image voxel value is in
     ]lower_thr, upper_thr[, out_value otherwise.
@@ -55,8 +56,7 @@ def binary_threshold(image, upper_thr, lower_thr,
     return thr
 
 
-
-def threshold(image, upper_thr, lower_thr, outside_value = -1500, out_type = None) :
+def threshold(image, upper_thr, lower_thr, outside_value=-1500, out_type=None):
     '''
     Assign to all the voxels outside [lower_thr, upper_thr] the value : outside_value
 
@@ -88,8 +88,7 @@ def threshold(image, upper_thr, lower_thr, outside_value = -1500, out_type = Non
     return thr
 
 
-
-def median_filter(image, radius = 1) :
+def median_filter(image, radius=1) :
     '''
     '''
     PixelType, Dim = itk.template(image)[1]
@@ -102,8 +101,7 @@ def median_filter(image, radius = 1) :
     return median_filter
 
 
-
-def connected_components(image, voxel_type = itk.SS) :
+def connected_components(image, voxel_type=itk.SS) :
     '''
     '''
 
@@ -115,12 +113,12 @@ def connected_components(image, voxel_type = itk.SS) :
     return cc
 
 
-def relabel_components(image, offset = 1, out_type = None) :
+def relabel_components(image, offset=1, out_type=None) :
 
     array, info = image2array(image)
     max_label = int(array.max())
 
-    labels, labels_counts =  np.unique(array,return_counts=True)
+    labels, labels_counts = np.unique(array, return_counts=True)
     labels = labels[np.argsort(labels_counts)[::-1]]
     labels0 = labels[labels != 0]
     new_max_label = offset - 1 + len(labels0)
@@ -131,10 +129,10 @@ def relabel_components(image, offset = 1, out_type = None) :
     if np.dtype(required_type).itemsize > np.dtype(array.dtype).itemsize :
         output_type = required_type
 
-    forward_map = np.zeros(max_label + 1, dtype = output_type)
+    forward_map = np.zeros(max_label + 1, dtype=output_type)
     forward_map[labels0] = new_labels0
-    inverse_map = np.zeros(new_max_label + 1, dtype = output_type)
-    inverse_map[offset : ] = labels0
+    inverse_map = np.zeros(new_max_label + 1, dtype=output_type)
+    inverse_map[offset :] = labels0
     relabeled = forward_map[array]
 
     result = array2image(relabeled, info)
@@ -144,8 +142,7 @@ def relabel_components(image, offset = 1, out_type = None) :
     return result
 
 
-
-def gaussian_smoothing(image, sigma = 1., normalize_across_scale = False) :
+def gaussian_smoothing(image, sigma=1., normalize_across_scale=False) :
     '''
     Computes the smoothing of an image by convolution with the Gaussian kernels
 
@@ -176,8 +173,7 @@ def gaussian_smoothing(image, sigma = 1., normalize_across_scale = False) :
     return smooth
 
 
-
-def hessian_matrix(image, sigma = 1., normalize_across_scale = False) :
+def hessian_matrix(image, sigma=1., normalize_across_scale=False) :
     '''
     Computes the Hessian matrix of an image by convolution with the Second and
     Cross derivatives of a Gaussian.
@@ -206,8 +202,7 @@ def hessian_matrix(image, sigma = 1., normalize_across_scale = False) :
     return hess
 
 
-
-def get_eigenvalues_map(hessian, dimensions = 3, order = 2) :
+def get_eigenvalues_map(hessian, dimensions=3, order=2) :
     '''
     omputes the eigen-values of every input symmetric matrix pixel.
 
@@ -230,7 +225,7 @@ def get_eigenvalues_map(hessian, dimensions = 3, order = 2) :
         not updated
     '''
 
-    ## filter declaration and new obj memory allocation (using New)
+    # filter declaration and new obj memory allocation (using New)
 
     eigen = itk.SymmetricEigenAnalysisImageFilter[type(hessian)].New()
     # seting of the dedidred arguments with the specified ones
@@ -242,8 +237,7 @@ def get_eigenvalues_map(hessian, dimensions = 3, order = 2) :
     return eigen
 
 
-
-def execute_pipeline(pipeline) :
+def execute_pipeline(pipeline):
     '''
     Execute an itk filter pipeline and return its output
 
@@ -288,8 +282,7 @@ def execute_pipeline(pipeline) :
     return pipeline.GetOutput()
 
 
-
-def opening(image, radius = 1, bkg = 0, frg = 1) :
+def opening(image, radius=1, bkg=0, frg=1) :
     '''
     Apply a Morphological opening on the targhet image
 
@@ -331,9 +324,8 @@ def opening(image, radius = 1, bkg = 0, frg = 1) :
     return opening
 
 
-
-def iterative_hole_filling(image, max_iter = 25, radius = 10,
-                           majority_threshold = 1, bkg_val = 0, fgr_val = 1) :
+def iterative_hole_filling(image, max_iter=25, radius=10,
+                           majority_threshold=1, bkg_val=0, fgr_val=1) :
     '''
     '''
     PixelType, Dim = itk.template(image)[1]
@@ -350,7 +342,7 @@ def iterative_hole_filling(image, max_iter = 25, radius = 10,
     return filter_
 
 
-def distance_map(image, image_spacing = True) :
+def distance_map(image, image_spacing=True) :
     '''
     '''
     ImageType = itk.Image[itk.UC, 3]
@@ -399,13 +391,11 @@ def add(im1, im2) :
     return array2image(res, info)
 
 
-
-def apply_pipeline_slice_by_slice(image, pipeline, dimension = 2, out_type = None) :
+def apply_pipeline_slice_by_slice(image, pipeline, dimension=2, out_type=None):
     '''
     '''
     PixelType, Dim = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dim]
-
 
     filter_ = itk.SliceBySliceImageFilter[ImageType, ImageType].New()
     _ = filter_.SetInput(image)
@@ -415,12 +405,11 @@ def apply_pipeline_slice_by_slice(image, pipeline, dimension = 2, out_type = Non
     return filter_
 
 
-
 def label_image2shape_label_map(image,
-                                bkg = 0,
-                                compute_perimeter = False,
-                                compute_feret_diameter = False,
-                                compute_oriented_bounding_box = False) :
+                                bkg=0,
+                                compute_perimeter=False,
+                                compute_feret_diameter=False,
+                                compute_oriented_bounding_box=False) :
 
     PixelType, Dim = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dim]
@@ -435,8 +424,7 @@ def label_image2shape_label_map(image,
     return shape
 
 
-
-def region_of_interest(image, region) :
+def region_of_interest(image, region):
 
     PixelType, Dim = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dim]
@@ -448,7 +436,7 @@ def region_of_interest(image, region) :
     return roi
 
 
-def normalize_image_gl(image, roi = None, label = 1):
+def normalize_image_gl(image, roi=None, label=1):
     '''
     Normalize voxel GL according to their mean and standard deviation.
     If mask is provided, the filter will rescale the GL according of the mean
@@ -474,7 +462,7 @@ def normalize_image_gl(image, roi = None, label = 1):
     '''
     # TODO this implementation is not so good, it must be replaced with a
     # better one
-    arr,info = image2array(image)
+    arr, info = image2array(image)
 
     if roi is not None:
         roi_arr, _ = image2array(roi)

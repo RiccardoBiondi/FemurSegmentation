@@ -1,34 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pytest
-import hypothesis
-
-import pytest
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from  hypothesis import HealthCheck as HC
+from hypothesis import HealthCheck as HC
 
 import itk
 import numpy as np
 
 # import function to test
 from FemurSegmentation.utils import cast_image
-from FemurSegmentation.utils import image2array
-from FemurSegmentation.utils import array2image
-from FemurSegmentation.utils import get_image_spatial_info
-from FemurSegmentation.utils import set_image_spatial_info
 from FemurSegmentation.utils import get_labeled_leg
 
 
 __author__ = ['Biondi Riccardo']
 __email__ = ['riccardo.biondi7@unibo.it']
 
-################################################################################
-###                                                                          ###
-###                         Define Test strategies                           ###
-###                                                                          ###
-################################################################################
+# STRATEGIES
+
 pixel_types = [itk.UC, itk.SS, itk.F, itk.D]
 image_dimensions = [2, 3]
 
@@ -67,7 +56,6 @@ def itk_info_strategy(draw) :
     pass
 
 
-
 @st.composite
 def label_leg2_strategy(draw) :
 
@@ -90,7 +78,6 @@ def label_leg2_strategy(draw) :
     return (leg1, lab1), (leg2, lab2)
 
 
-
 @st.composite
 def label_leg1_strategy(draw) :
     shape1 = (200, 200, 200)
@@ -109,20 +96,14 @@ def label_leg1_strategy(draw) :
     leg2 = itk.GetImageFromArray(leg2)
     lab2 = itk.GetImageFromArray(lab2)
 
-
     return (leg1, lab1), (leg2, lab2)
 
-################################################################################
-###                                                                          ###
-###                                 TESTING                                  ###
-###                                                                          ###
-################################################################################
-
+# TEST
 
 
 @given(itk_image_strategy(), st.sampled_from(pixel_types))
-@settings(max_examples = 20, deadline = None,
-          suppress_health_check = (HC.too_slow, ))
+@settings(max_examples=20, deadline=None,
+          suppress_health_check=(HC.too_slow, ))
 def test_castImage(image, new_pixel_type) :
     '''
     Given :
@@ -142,20 +123,6 @@ def test_castImage(image, new_pixel_type) :
     assert newImageDimension == oldImageDimension
 
 
-#@given()
-#@settings()
-#def test_Image2Array() :
-#    pass
-
-
-#@given()
-#@settings()
-#def test_Array2Image() :
-#    pass
-
-
-
-
 @given(label_leg2_strategy())
 def test_select_leg2_w_wlabel(legs) :
     '''
@@ -173,7 +140,6 @@ def test_select_leg2_w_wlabel(legs) :
     selected = get_labeled_leg(leg1, leg2)
 
     assert np.all(selected[0] == leg2[0])
-
 
 
 @given(label_leg1_strategy())

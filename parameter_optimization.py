@@ -1,10 +1,8 @@
 #!/bin/env python
 
 # base packages
-import os
 import itk
 import numpy as np
-from glob import glob
 
 # optimization packages
 from copy import deepcopy
@@ -14,7 +12,7 @@ from skopt.learning import GaussianProcessRegressor
 from skopt.optimizer import base_minimize
 from skopt.utils import check_random_state
 from skopt.utils import use_named_args
-from skopt.space import Real, Integer, Categorical
+from skopt.space import Real, Integer
 from skopt import gp_minimize
 from skopt import callbacks
 
@@ -23,8 +21,6 @@ from FemurSegmentation.IOManager import ImageReader
 from FemurSegmentation.utils import cast_image
 from FemurSegmentation.metrics import dice_score
 from segment_femur import pre_processing, segmentation, post_processing
-
-
 
 # ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██     ██████  ███████ ███████
 # ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██     ██   ██ ██      ██
@@ -37,56 +33,53 @@ global masks
 
 # dictionary which define the parameters generation process
 
-spaces = { "gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
-                           Real(0.0, 0.5, "uniform", name = "bkg_lower_thr"),
-                           Real(0.51, 1.2, "uniform", name = "bkg_upper_thr"),
-                           Real(0.95, 1.5, "uniform", name="obj_gl_thr"),
-                           Integer(25, 1000, "identity", name="Lambda"),
-                           Real(0.1, 1.5, "uniform", name="single_scale"),
-                           Real(0.1, 2.0, "uniform", name="obj_thr_bones"),
-                           Real(0.1, 1.25, "uniform", name="sigma"),
-                           Real(0.1, 1.5, "uniform", name="multiscale_start"),
-                           Real(0.1, 0.7, "uniform", name="multiscale_step"),
-                           Integer(0, 7, "uniform", name="number_of_scales"),
-                           Real(0.1, 1.0, "uniform", name="bone_ms_thr"),
-                           Real(-1.2, 1.2, "uniform", name="unsharp_thr"),
-                           Real(0.1, 2.5, "uniform", name="unsharp_amount"),
-                           Real(0.1, 1.7, "uniform", name="unsharp_sigma")]}
-
+spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
+                          Real(0.0, 0.5, "uniform", name = "bkg_lower_thr"),
+                          Real(0.51, 1.2, "uniform", name = "bkg_upper_thr"),
+                          Real(0.95, 1.5, "uniform", name="obj_gl_thr"),
+                          Integer(25, 1000, "identity", name="Lambda"),
+                          Real(0.1, 1.5, "uniform", name="single_scale"),
+                          Real(0.1, 2.0, "uniform", name="obj_thr_bones"),
+                          Real(0.1, 1.25, "uniform", name="sigma"),
+                          Real(0.1, 1.5, "uniform", name="multiscale_start"),
+                          Real(0.1, 0.7, "uniform", name="multiscale_step"),
+                          Integer(0, 7, "uniform", name="number_of_scales"),
+                          Real(0.1, 1.0, "uniform", name="bone_ms_thr"),
+                          Real(-1.2, 1.2, "uniform", name="unsharp_thr"),
+                          Real(0.1, 2.5, "uniform", name="unsharp_amount"),
+                          Real(0.1, 1.7, "uniform", name="unsharp_sigma")]}
 
 
 def run_segmentation(image, roi_lower_thr, bkg_lower_thr, bkg_upper_thr,
-                     obj_gl_thr, Lambda, single_scale, obj_thr_bones,
-                     sigma, multiscale_start, multiscale_step, number_of_scales,
-                     unsharp_thr, unsharp_amount, unsharp_sigma):
+                    obj_gl_thr, Lambda, single_scale, obj_thr_bones,
+                    sigma, multiscale_start, multiscale_step, number_of_scales,
+                    unsharp_thr, unsharp_amount, unsharp_sigma, bone_ms_thr):
     multiscale_max = multiscale_start + number_of_scales * multiscale_step
     scales = np.arange(multiscale_start, multiscale_max, multiscale_step)
 
     ROI, bkg, obj = pre_processing(image,
-                                    roi_lower_thr = roi_lower_thr,
-                                    bkg_lower_thr = bkg_lower_thr,
-                                    bkg_upper_thr = bkg_upper_thr,
-                                    obj_thr_gl = obj_gl_thr,
-                                    obj_thr_bones = obj_thr_bones,
-                                    scale = [single_scale],
-                                    amount = unsharp_amount,
-                                    sigma = unsharp_sigma,
-                                    thr = unsharp_thr)
+                                roi_lower_thr=roi_lower_thr,
+                                bkg_lower_thr=bkg_lower_thr,
+                                bkg_upper_thr=bkg_upper_thr,
+                                obj_thr_gl=obj_gl_thr,
+                                obj_thr_bones=obj_thr_bones,
+                                scale=[single_scale],
+                                amount=unsharp_amount,
+                                sigma=unsharp_sigma,
+                                thr=unsharp_thr)
 
     label = segmentation(image,
                         obj,
                         bkg,
                         ROI,
-                        scales = scales,
-                        sigma = sigma,
-                        Lambda = Lambda,
-                        bone_ms_thr = bone_ms_thr
-                        )
+                        scales=scales,
+                        sigma=sigma,
+                        Lambda=Lambda,
+                        bone_ms_thr=bone_ms_thr)
 
     label = post_processing(label)
 
     return label
-
 
 
 def run_optimization(space_key, old_skf, n_calls,
@@ -102,23 +95,22 @@ def run_optimization(space_key, old_skf, n_calls,
         # split the image and the mask
         for im, msk in zip(images, masks) :
 
-            result = run_segmentation(image = im,
-                                    roi_lower_thr = params["roi_lower_thr"],
-                                    bkg_lower_thr = params["bkg_lower_thr"],
-                                    bkg_upper_thr = params["bkg_upper_thr"],
-                                    obj_gl_thr = params["obj_gl_thr"],
-                                    Lambda = params["Lambda"],
-                                    single_scale = params["single_scale"],
-                                    obj_thr_bones = params["obj_thr_bones"],
-                                    sigma = params["sigma"],
-                                    multiscale_start = params["multiscale_start"],
-                                    multiscale_step = params["multiscale_step"],
-                                    number_of_scales = params["number_of_scales"],
-                                    unsharp_thr = params["unsharp_thr"],
-                                    unsharp_amount = params["unsharp_amount"],
-                                    unsharp_sigma = params["unsharp_sigma"],
-                                    bone_ms_thr = params["bone_ms_thr"]
-                                    )
+            result = run_segmentation(image=im,
+                                    roi_lower_thr=params["roi_lower_thr"],
+                                    bkg_lower_thr=params["bkg_lower_thr"],
+                                    bkg_upper_thr=params["bkg_upper_thr"],
+                                    obj_gl_thr=params["obj_gl_thr"],
+                                    Lambda=params["Lambda"],
+                                    single_scale=params["single_scale"],
+                                    obj_thr_bones=params["obj_thr_bones"],
+                                    sigma=params["sigma"],
+                                    multiscale_start=params["multiscale_start"],
+                                    multiscale_step=params["multiscale_step"],
+                                    number_of_scales=params["number_of_scales"],
+                                    unsharp_thr=params["unsharp_thr"],
+                                    unsharp_amount=params["unsharp_amount"],
+                                    unsharp_sigma=params["unsharp_sigma"],
+                                    bone_ms_thr=params["bone_ms_thr"])
             result = cast_image(result, itk.SS)
 
             hd = dice_score(msk, result)
@@ -128,11 +120,12 @@ def run_optimization(space_key, old_skf, n_calls,
 
         return 100 * (1 - np.mean(hds))
 
-    checkpoint_callback = callbacks.CheckpointSaver(outfile, store_objective=False)
+    checkpoint_callback = callbacks.CheckpointSaver(outfile,
+                                                    store_objective=False)
     # run from scratch
     if old_skf == "" :
 
-        print("run optimization from scratch", flush = True)
+        print("run optimization from scratch", flush=True)
 
         clsf_gp = gp_minimize(objective,
                             space,
@@ -144,12 +137,13 @@ def run_optimization(space_key, old_skf, n_calls,
                             noise=1e-10)
 
     else :
-        print("Retrieving old result and carry on the optimization from where it was left")
+        print("Retrieving old result and carry on the optimization from where \
+            it was left")
 
         old_clsf_gp = skload(old_skf)
         args = deepcopy(old_clsf_gp.spect['args'])
         args['n_calls'] += n_calls
-        iters   = list(old_clsf_gp.x_iters)
+        iters = list(old_clsf_gp.x_iters)
         y_iters = list(old_clsf_gp.func_vals)
 
         if(isinstance(args['random_state'], np.random.RandomState)):
@@ -173,10 +167,6 @@ def run_optimization(space_key, old_skf, n_calls,
 
     return clsf_gp
 
-
-
-
-
     # ██████  ██    ██ ███    ██      ██████  ██████  ████████ ██ ███    ███ ██ ███████  █████  ████████ ██  ██████  ███    ██
     # ██   ██ ██    ██ ████   ██     ██    ██ ██   ██    ██    ██ ████  ████ ██    ███  ██   ██    ██    ██ ██    ██ ████   ██
     # ██████  ██    ██ ██ ██  ██     ██    ██ ██████     ██    ██ ██ ████ ██ ██   ███   ███████    ██    ██ ██    ██ ██ ██  ██
@@ -184,8 +174,7 @@ def run_optimization(space_key, old_skf, n_calls,
     # ██   ██  ██████  ██   ████      ██████  ██         ██    ██ ██      ██ ██ ███████ ██   ██    ██    ██  ██████  ██   ████
 
 
-
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     images = []
     masks = []
@@ -212,11 +201,11 @@ if __name__ == '__main__' :
         _ = masks.append(reader.read())
 
     # compute parameters
-    result = run_optimization(space_key         = space_key,
-                            old_skf           = "",
-                            n_calls           = n_calls,
-                            n_random_starts   = n_random_starts,
-                            outfile           = outfile,
-                            init_seed         = init_seed)
+    result = run_optimization(space_key=space_key,
+                            old_skf="",
+                            n_calls=n_calls,
+                            n_random_starts=n_random_starts,
+                            outfile=outfile,
+                            init_seed=init_seed)
     # Save final results
     skdump(result, outfile, store_objective=False)

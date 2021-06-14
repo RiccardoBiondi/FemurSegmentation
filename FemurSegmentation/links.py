@@ -1,11 +1,10 @@
-import itk
 import numpy as np
 
-from FemurSegmentation.utils import image2array, array2image
+from FemurSegmentation.utils import image2array
 # TODO add healt check and error/exception handling
 
 __author__ = ['Riccardo Biondi']
-__email__  = ['riccardo.biondi7@unibo.it']
+__email__ = ['riccardo.biondi7@unibo.it']
 
 
 class GraphCutLinks :
@@ -16,8 +15,8 @@ class GraphCutLinks :
                 roi,
                 obj,
                 bkg,
-                sigma = .25,
-                Lambda = 50.,
+                sigma=.25,
+                Lambda=50.,
                 bone_ms_thr=0.2) :
         '''
         '''
@@ -68,14 +67,13 @@ class GraphCutLinks :
 
         return cost_source
 
-
     def tLinkSink(self) :
         cost_sink = np.ones(self.image.shape)
 
         cond = (self.bkg == 1) & (self.roi == 1)
         cost_sink[cond] = self.Lambda
 
-        cond = (self.obj == 1) & ( self.roi == 1)
+        cond = (self.obj == 1) & (self.roi == 1)
         cost_sink[cond] = 0
 
         return cost_sink
@@ -97,11 +95,11 @@ class GraphCutLinks :
                                           self.boneness[:, :, :-1],
                                           self.boneness[:, :, 1:])
 
-        CentersVx = np.concatenate([Z[0], Y[0], X[0] ])
-        NeighborsVx = np.concatenate([Z[1], Y[1], X[1] ])
+        CentersVx = np.concatenate([Z[0], Y[0], X[0]])
+        NeighborsVx = np.concatenate([Z[1], Y[1], X[1]])
         _totalNeighbors = len(NeighborsVx)
-        costFromCenter = np.concatenate([Zfrom, Yfrom, Xfrom ])
-        costToCenter = np.concatenate([Zto, Yto, Xto ])
+        costFromCenter = np.concatenate([Zfrom, Yfrom, Xfrom])
+        costToCenter = np.concatenate([Zto, Yto, Xto])
 
         return CentersVx, NeighborsVx, _totalNeighbors, costFromCenter, costToCenter
 
@@ -110,7 +108,7 @@ class GraphCutLinks :
         # get tLinks
         source = self.tLinkSource()
         sink = self.tLinkSink()
-        #flatten tLinks
+        # flatten tLinks
         cost_sink_flatten = sink[self.vx_id != -1]
         cost_source_flatten = source[self.vx_id != -1]
         cost_vx = self.vx_id[self.vx_id != -1]

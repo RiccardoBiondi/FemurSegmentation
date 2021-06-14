@@ -6,7 +6,6 @@ __author__ = ['Biondi Riccardo']
 __email__ = ['riccardo.biondi7@unibo.it']
 
 
-
 # ██████  ███████  █████  ██████  ███████ ██████
 # ██   ██ ██      ██   ██ ██   ██ ██      ██   ██
 # ██████  █████   ███████ ██   ██ █████   ██████
@@ -43,7 +42,7 @@ class ImageReader :
     >>> image = reader.read()
     '''
 
-    def __init__ (self, path = "", image_type = itk.Image[itk.UC, 3]) :
+    def __init__(self, path="", image_type=itk.Image[itk.UC, 3]):
         '''
         Parameters
         ----------
@@ -55,12 +54,10 @@ class ImageReader :
         self.path = path
         self.image_type = image_type
 
-
-    def __call__(self, path, image_type = itk.Image[itk.UC, 3]) :
+    def __call__(self, path, image_type=itk.Image[itk.UC, 3]) :
         self.path = path
         self.image_type = image_type
         return self.read()
-
 
     def isPath2File(self) :
         '''
@@ -84,24 +81,24 @@ class ImageReader :
             else :
                 return False
         else :
-            raise OSError("The specified path or image file : %s does not exists" % self.path)
-
+            raise OSError("The specified path or image file : %s \
+                            does not exists" % self.path)
 
     def DICOM2Volume(self) :
         '''
         Will read a DICOM series and convert it into an image tensor
         '''
         seriesGenerator = itk.GDCMSeriesFileNames.New()
-        seriesGenerator.SetUseSeriesDetails(True) # Use images metadata
-        seriesGenerator.AddSeriesRestriction("0008|0021") # Series Date
-        seriesGenerator.SetGlobalWarningDisplay(False); # disable warnings
+        seriesGenerator.SetUseSeriesDetails(True)  # Use images metadata
+        seriesGenerator.AddSeriesRestriction("0008|0021")  # Series Date
+        seriesGenerator.SetGlobalWarningDisplay(False)  # disable warnings
         seriesGenerator.SetDirectory(self.path)
 
         # Get all indexes serieses and keep the longest series
         # (in doing so, we overcome the issue regarding the first CT sampling scan)
         seqIds = seriesGenerator.GetSeriesUIDs()
-        UIDsFileNames = [ seriesGenerator.GetFileNames(seqId) for seqId in seqIds ]
-        LargestDicomSetUID = np.argmax(list(map(len,UIDsFileNames)))
+        UIDsFileNames = [seriesGenerator.GetFileNames(seqId) for seqId in seqIds]
+        LargestDicomSetUID = np.argmax(list(map(len, UIDsFileNames)))
         LargestDicomSetFileNames = UIDsFileNames[LargestDicomSetUID]
 
         dicom_reader = itk.GDCMImageIO.New()
@@ -114,7 +111,6 @@ class ImageReader :
 
         return reader.GetOutput()
 
-
     def image2Volume(self) :
         '''
         Read a Medical image as itk Image volume
@@ -125,7 +121,6 @@ class ImageReader :
 
         return reader.GetOutput()
 
-
     def read(self) :
         '''
         '''
@@ -134,17 +129,11 @@ class ImageReader :
         else :
             return self.DICOM2Volume()
 
-
-
-
             # ██     ██ ██████  ██ ████████ ███████ ██████
             # ██     ██ ██   ██ ██    ██    ██      ██   ██
             # ██  █  ██ ██████  ██    ██    █████   ██████
             # ██ ███ ██ ██   ██ ██    ██    ██      ██   ██
             #  ███ ███  ██   ██ ██    ██    ███████ ██   ██
-
-
-
 
 
 class VolumeWriter :
@@ -179,26 +168,22 @@ class VolumeWriter :
     >>> writer.write()
     '''
 
-    def __init__(self, path = "", image =  None, as_dicom = False) :
+    def __init__(self, path="", image=None, as_dicom=False) :
         self.path = path
         self.image = image
         self.as_dicom = as_dicom
 
-
-    def __call__ (self, path, image, as_dicom = False) :
+    def __call__ (self, path, image, as_dicom=False) :
         self.path = path
         self.image = image
         self.as_dicom = as_dicom
 
         self.write()
 
-
     def GetImageType(self) :
         PixelType, Dimension = itk.template(self.image)[1]
 
         return itk.Image[PixelType, Dimension]
-
-
 
     def volume2DICOM(self) :
         '''
@@ -214,14 +199,14 @@ class VolumeWriter :
         _ = series.SetSeriesFormat(slice_format)
         _ = series.SetStartIndex(largest_region.GetIndex()[2])
         _ = series.SetEndIndex(largest_region.GetIndex()[2] +
-                                largest_region.GetSize()[2] -1)
+                            largest_region.GetSize()[2] - 1)
         _ = series.SetIncrementIndex(1)
 
         # prepare the writer object and write the series
         PixelType, _ = itk.template(self.image)[1]
         dicom_io = itk.GDCMImageIO.New()
-        input_type = itk.Image[PixelType, 3] # takes a volume as input
-        output_type = itk.Image[PixelType, 2] # write a series of 2D iamges
+        input_type = itk.Image[PixelType, 3]  # takes a volume as input
+        output_type = itk.Image[PixelType, 2]  # write a series of 2D iamges
 
         writer = itk.ImageSeriesWriter[input_type, output_type].New()
         _ = writer.SetInput(self.image)
@@ -229,8 +214,6 @@ class VolumeWriter :
         _ = writer.SetFileNames(series.GetFileNames())
 
         _ = writer.Update()
-
-
 
     def volume2Image(self) :
         '''
@@ -240,8 +223,6 @@ class VolumeWriter :
         _ = writer.SetFileName(self.path)
         _ = writer.SetInput(self.image)
         _ = writer.Update()
-
-
 
     def write(self) :
         '''

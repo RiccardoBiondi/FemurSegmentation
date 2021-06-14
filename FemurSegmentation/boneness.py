@@ -1,8 +1,8 @@
-import itk
 import numpy as np
 
-from FemurSegmentation.utils import image2array, array2image, cast_image
-from FemurSegmentation.utils import get_image_spatial_info, set_image_spatial_info
+from FemurSegmentation.utils import image2array
+from FemurSegmentation.utils import array2image
+from FemurSegmentation.utils import get_image_spatial_info
 
 from FemurSegmentation.filters import gaussian_smoothing
 from FemurSegmentation.filters import hessian_matrix
@@ -14,7 +14,7 @@ from FemurSegmentation.filters import execute_pipeline
 
 class Boneness :
 
-    def __init__(self, image, scales = [0.5], roi = None) :
+    def __init__(self, image, scales=[0.5], roi=None) :
         '''
         Class to compute the boneness measure of the filter
 
@@ -38,12 +38,9 @@ class Boneness :
         self.image = image
         self.scales = scales
 
-
-
     def computeEigenvaluesMeasures(self, eigenvalues_map) :
         '''
         '''
-
         eigen, _ = image2array(eigenvalues_map)
 
         # I'm computing the eigenvalues absolute value and also taking only the
@@ -51,37 +48,35 @@ class Boneness :
         # his way th eigenvectors (??) -> chek in the docs to be shure!!
         #
         # After that i will get all the matrix element with the laregerst
-        #eigenvalues (the third one) iferent from zero, that because it is at
+        # eigenvalues (the third one) iferent from zero, that because it is at
         # the denominator in the computing of one particular quantity
         eigen_abs = np.abs(eigen[:, :, :, :3])
         eigen_no_null = ~np.isclose(eigen_abs[:, :, :, 2], 0)
 
         # strat the computing of he eigen quantity for the estimation of the
         # boneness
-        R_bones = np.empty(eigen_abs.shape[:-1], dtype = np.float32)
+        R_bones = np.empty(eigen_abs.shape[:-1], dtype=np.float32)
 
-        det_image = np.sum(eigen_abs, axis = -1)
+        det_image = np.sum(eigen_abs, axis=-1)
 
         if self.roi is not None :
             # compute the mean only inside the region of interest
             mean_norm = 1. / np.mean(det_image[self.roi != 0])
         else :
             mean_norm = 1. / np.mean(det_image)
-        R_noise = det_image*mean_norm
+        R_noise = det_image * mean_norm
 
-        R_bones[eigen_no_null] = (eigen_abs[eigen_no_null, 0 ] * eigen_abs[eigen_no_null, 1]) / eigen_abs[eigen_no_null, 2] ** 2
+        R_bones[eigen_no_null] = (eigen_abs[eigen_no_null, 0] * eigen_abs[eigen_no_null, 1]) / eigen_abs[eigen_no_null, 2] ** 2
 
         # FIXME I do not preserve image informations!!
         return R_bones, R_noise, eigen_no_null, eigen
 
-
-
-    def bonenessMeasure(self, scale, alpha = 0.5, beta = 0.05) :
+    def bonenessMeasure(self, scale, alpha=0.5, beta=0.05) :
         '''
         '''
         # pipeline to get the eigenvalues map:
-        sm = gaussian_smoothing(self.image, sigma = scale)
-        hess = hessian_matrix(sm.GetOutput(), sigma = scale)
+        sm = gaussian_smoothing(self.image, sigma=scale)
+        hess = hessian_matrix(sm.GetOutput(), sigma=scale)
         pipe = get_eigenvalues_map(hess.GetOutput())
 
         eigen_map = execute_pipeline(pipe)
@@ -93,14 +88,12 @@ class Boneness :
 
         measure[eigen_no_null] = - np.sign(eigen[eigen_no_null, 2])
         measure[eigen_no_null] *= np.exp(- 0.5 * R_s[eigen_no_null])
-        measure[eigen_no_null] *= ( 1 - np.exp(- R_noise[eigen_no_null] *
-                                               R_noise[eigen_no_null] * 4) )
+        measure[eigen_no_null] *= (1 - np.exp(- R_noise[eigen_no_null]
+                                            * R_noise[eigen_no_null] * 4))
 
         return measure
 
-
-
-    def computeBonenessMeasure(self, alpha = 0.5, beta = 0.05) :
+    def computeBonenessMeasure(self, alpha=0.5, beta=0.05) :
         '''
         '''
         ms_measure = self.bonenessMeasure(self.scales[0])

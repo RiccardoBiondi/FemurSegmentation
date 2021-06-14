@@ -4,7 +4,7 @@
 import pytest
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from  hypothesis import HealthCheck as HC
+from hypothesis import HealthCheck as HC
 
 import os
 import itk
@@ -12,10 +12,8 @@ import numpy as np
 import FemurSegmentation.IOManager as IOManager
 
 
-
 __author__ = ['Riccardo Biondi']
-__email__  = ['riccardo.biondi4@studio.unibo.it']
-
+__email__ = ['riccardo.biondi4@studio.unibo.it']
 
 
 # ███████ ████████ ██████   █████  ████████ ███████  ██████  ██ ███████ ███████
@@ -25,17 +23,15 @@ __email__  = ['riccardo.biondi4@studio.unibo.it']
 # ███████    ██    ██   ██ ██   ██    ██    ███████  ██████  ██ ███████ ███████
 
 
+legitimate_chars = st.characters(whitelist_categories=('Lu', 'Ll'),
+                                min_codepoint=65, max_codepoint=90)
 
-
-
-legitimate_chars = st.characters(whitelist_categories = ('Lu','Ll'),
-                                    min_codepoint = 65, max_codepoint = 90)
-
-text_strategy = st.text(alphabet = legitimate_chars, min_size = 1,
-                            max_size = 15)
+text_strategy = st.text(alphabet=legitimate_chars, min_size=1,
+                        max_size=15)
 
 medical_image_format = ['nrrd', 'nii']
 pixel_types = [itk.UC, itk.SS]
+
 
 @st.composite
 def random_image_strategy(draw) :
@@ -57,9 +53,6 @@ def path2image_strategy(draw) :
 
     return folder_name, image_name, image_format
 
-
-
-
     # ████████ ███████ ███████ ████████
     #    ██    ██      ██         ██
     #    ██    █████   ███████    ██
@@ -67,18 +60,11 @@ def path2image_strategy(draw) :
     #    ██    ███████ ███████    ██
 
 
-
-
-
-
 # ██████  ███████  █████  ██████  ███████ ██████
 # ██   ██ ██      ██   ██ ██   ██ ██      ██   ██
 # ██████  █████   ███████ ██   ██ █████   ██████
 # ██   ██ ██      ██   ██ ██   ██ ██      ██   ██
 # ██   ██ ███████ ██   ██ ██████  ███████ ██   ██
-
-
-
 
 class TestImageReader :
     '''
@@ -93,11 +79,10 @@ class TestImageReader :
         assert reader.path == ""
         assert reader.image_type == itk.Image[itk.UC, 3]
 
-
     @given(path2image_strategy(), st.sampled_from(pixel_types))
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
-    def test_ImageReaderParamsInit (self, imagePath, pixelType) :
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
+    def test_ImageReaderParamsInit(self, imagePath, pixelType):
         '''
         Given :
             - path
@@ -118,13 +103,13 @@ class TestImageReader :
         assert reader.path == path
         assert reader.image_type == ImageType
 
-
     def test_isPath2File(self) :
         '''
         Given a path to a folder, test that return False
         '''
 
-        reader = IOManager.ImageReader("./testing/test_images", itk.Image[itk.SS, 3])
+        reader = IOManager.ImageReader("./testing/test_images",
+                                    itk.Image[itk.SS, 3])
         assert ~reader.isPath2File()
 
     def test_isPath2File_IOError(self) :
@@ -138,14 +123,11 @@ class TestImageReader :
         with pytest.raises(OSError) :
             assert reader.isPath2File()
 
-
             # ██     ██ ██████  ██ ████████ ███████ ██████
             # ██     ██ ██   ██ ██    ██    ██      ██   ██
             # ██  █  ██ ██████  ██    ██    █████   ██████
             # ██ ███ ██ ██   ██ ██    ██    ██      ██   ██
             #  ███ ███  ██   ██ ██    ██    ███████ ██   ██
-
-
 
 
 class TestVolumeWriter :
@@ -158,7 +140,7 @@ class TestVolumeWriter :
         writer = IOManager.VolumeWriter()
 
         assert writer.path == ""
-        assert writer.image == None
+        assert writer.image is None
         assert ~writer.as_dicom
 
     @given(random_image_strategy(), path2image_strategy())
@@ -184,7 +166,6 @@ class TestVolumeWriter :
         assert writer.image == image
         assert ~writer.as_dicom
 
-
         # ██████  ██     ██
         # ██   ██ ██     ██
         # ██████  ██  █  ██
@@ -192,13 +173,11 @@ class TestVolumeWriter :
         # ██   ██  ███ ███
 
 
-
-
 class TestReadAndWrite :
 
     @given(random_image_strategy(), path2image_strategy())
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_read_and_write_image(self, image, inPath) :
         '''
         Given :
@@ -216,10 +195,10 @@ class TestReadAndWrite :
         imageType = itk.Image[pixelType, dimension]
         inArray = itk.GetArrayFromImage(image)
 
-        writer = IOManager.VolumeWriter(path = path, image = image)
+        writer = IOManager.VolumeWriter(path=path, image=image)
         _ = writer.volume2Image()
 
-        reader = IOManager.ImageReader(path = path, image_type = imageType)
+        reader = IOManager.ImageReader(path=path, image_type=imageType)
         redImage = reader.image2Volume()
 
         redPixel, redDim = itk.template(redImage)[1]
@@ -227,11 +206,11 @@ class TestReadAndWrite :
 
         assert redPixel == pixelType
         assert redDim == dimension
-        assert np.isclose(redArray,inArray).all()
+        assert np.isclose(redArray, inArray).all()
 
     @given(random_image_strategy(), text_strategy)
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_read_and_write_dicom(self, image, folder_name) :
         '''
         Given :
@@ -250,11 +229,11 @@ class TestReadAndWrite :
         imageType = itk.Image[pixelType, dimension]
         inArray = itk.GetArrayFromImage(image)
 
-        writer = IOManager.VolumeWriter(path = dicom_path, image = image,
-                                        as_dicom = True)
+        writer = IOManager.VolumeWriter(path=dicom_path, image=image,
+                                        as_dicom=True)
         _ = writer.volume2DICOM()
 
-        reader = IOManager.ImageReader(path = dicom_path, image_type = imageType)
+        reader = IOManager.ImageReader(path=dicom_path, image_type=imageType)
         redImage = reader.DICOM2Volume()
 
         redPixel, redDim = itk.template(redImage)[1]
@@ -262,12 +241,12 @@ class TestReadAndWrite :
 
         assert redPixel == pixelType
         assert redDim == dimension
-        assert np.isclose(redArray,inArray).all()
+        assert np.isclose(redArray, inArray).all()
 
 
     @given(random_image_strategy(), path2image_strategy(), st.booleans())
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_read_and_write(self, image, inPath, as_dicom) :
         '''
         Given :
@@ -292,9 +271,9 @@ class TestReadAndWrite :
             base_path = "./testing/test_images/{}.{}"
             path = base_path.format(inPath[1], inPath[2])
 
-        writer = IOManager.VolumeWriter(path = path, image = image, as_dicom = as_dicom)
+        writer = IOManager.VolumeWriter(path=path, image=image, as_dicom=as_dicom)
         _ = writer.write()
-        reader = IOManager.ImageReader(path = path, image_type = imageType)
+        reader = IOManager.ImageReader(path=path, image_type=imageType)
         redImage = reader.read()
 
         redPixelType, redDimension = itk.template(redImage)[1]
@@ -304,10 +283,9 @@ class TestReadAndWrite :
         assert redPixelType == pixelType
         assert np.isclose(inArray, redArray).all()
 
-
     @given(random_image_strategy(), path2image_strategy(), st.booleans())
-    @settings(max_examples = 20, deadline = None,
-              suppress_health_check = (HC.too_slow, ))
+    @settings(max_examples=20, deadline=None,
+              suppress_health_check=(HC.too_slow, ))
     def test_read_and_write_call(self, image, inPath, as_dicom) :
         '''
         Given :
@@ -333,9 +311,9 @@ class TestReadAndWrite :
             path = base_path.format(inPath[1], inPath[2])
 
         writer = IOManager.VolumeWriter()
-        _ = writer(path = path, image = image, as_dicom = as_dicom)
+        _ = writer(path=path, image=image, as_dicom=as_dicom)
         reader = IOManager.ImageReader()
-        redImage = reader(path = path, image_type = imageType)
+        redImage = reader(path=path, image_type=imageType)
 
         redPixelType, redDimension = itk.template(redImage)[1]
         redArray = itk.GetArrayFromImage(redImage)
