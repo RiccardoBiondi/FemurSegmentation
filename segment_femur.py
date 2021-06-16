@@ -19,7 +19,7 @@ from FemurSegmentation.filters import add
 from FemurSegmentation.filters import apply_pipeline_slice_by_slice
 from FemurSegmentation.filters import normalize_image_gl
 from FemurSegmentation.filters import unsharp_mask
-
+from FemurSegmentation.filters import median_filter
 
 from FemurSegmentation.image_splitter import LegImages
 from FemurSegmentation.boneness import Boneness
@@ -110,7 +110,8 @@ def pre_processing(image, roi_lower_thr=-100,
     # now get the largest connected region, which will be(hopely) the
     # femur region
     obj = cast_image(obj, itk.SS)
-    cc = connected_components(obj)
+    med = medain_filter(image=obj, radius=1)
+    cc = connected_components(med.GetOutput())
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
     obj = binary_threshold(rel, 2, 0, out_type=itk.UC)
@@ -181,7 +182,8 @@ def post_processing(labeled):
     filled = execute_pipeline(filler)
 
     filled = cast_image(filled, itk.US)
-    cc = connected_components(filled, itk.US)
+    med = median_filter(image=filled, radius=1)
+    cc = connected_components(med.GetOutput(), itk.US)
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
     filled = binary_threshold(rel, 2, 0, out_type=itk.UC)
