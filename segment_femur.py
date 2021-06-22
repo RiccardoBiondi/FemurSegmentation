@@ -68,6 +68,8 @@ def parse_args() :
 def pre_processing(image, roi_lower_thr=-100,
                 bkg_lower_thr=0.0,
                 bkg_upper_thr=0.5,
+                bkg_bones_low=0.01, # to exclude marrow bones from hard contrains
+                bkg_bones_up=0.5,
                 obj_thr_gl=1.2,
                 obj_thr_bones=0.3,
                 scale=[1.],
@@ -90,10 +92,11 @@ def pre_processing(image, roi_lower_thr=-100,
                                               amount=amount,
                                               threhsold=thr))
 
-    bkg = binary_threshold(unsharped,
-                           bkg_upper_thr,
-                           bkg_lower_thr,
-                           out_type=itk.UC)
+# old version
+#    bkg = binary_threshold(unsharped,
+#                           bkg_upper_thr,
+#                           bkg_lower_thr,
+#                           out_type=itk.UC)
     # now compute the single scale boneness measure that will be used to
     # determine the object
     bones = Boneness(unsharped, scale, ROI)
@@ -106,6 +109,10 @@ def pre_processing(image, roi_lower_thr=-100,
     obj[~cond] = 0
 
     obj = array2image(obj, info)
+
+    # new version
+    bkg, info = image2array(unsharped)
+    cond = (bkg > bkg_lower_thr) & (bkg < bkg_upper_thr) & (boneness > bkg_bones_low) & (boneness < bkg_bones_up)
 
     # now get the largest connected region, which will be(hopely) the
     # femur region
@@ -148,6 +155,7 @@ def segmentation(image, obj, bkg, ROI, scales=[.5, 1.], sigma=.25,
     labelIdImage[gc_links.vx_id == -1] = 0
     labelIdImage = np.asarray(labelIdImage, dtype=np.uint8)
     labeled = array2image(labelIdImage, info)
+    labeled = execute_pipeline(median_filter(labeled, 1))
 
     return labeled
 

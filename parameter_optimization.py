@@ -47,13 +47,16 @@ spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
                           Real(0.1, 1.0, "uniform", name="bone_ms_thr"),
                           Real(-1.2, 1.2, "uniform", name="unsharp_thr"),
                           Real(0.1, 2.5, "uniform", name="unsharp_amount"),
-                          Real(0.1, 1.7, "uniform", name="unsharp_sigma")]}
+                          Real(0.1, 1.7, "uniform", name="unsharp_sigma"),
+                          Real(0.001, 0.1, "uniorm", name="bkg_bones_low"),
+                          Real(0.2, 0.5, "uniform", name="bkg_bones_up")]}
 
 
 def run_segmentation(image, roi_lower_thr, bkg_lower_thr, bkg_upper_thr,
                     obj_gl_thr, Lambda, single_scale, obj_thr_bones,
                     sigma, multiscale_start, multiscale_step, number_of_scales,
-                    unsharp_thr, unsharp_amount, unsharp_sigma, bone_ms_thr):
+                    unsharp_thr, unsharp_amount, unsharp_sigma, bone_ms_thr,
+                    bkg_bones_low, bkg_bones_up):
     multiscale_max = multiscale_start + number_of_scales * multiscale_step
     scales = np.arange(multiscale_start, multiscale_max, multiscale_step)
 
@@ -61,6 +64,8 @@ def run_segmentation(image, roi_lower_thr, bkg_lower_thr, bkg_upper_thr,
                                 roi_lower_thr=roi_lower_thr,
                                 bkg_lower_thr=bkg_lower_thr,
                                 bkg_upper_thr=bkg_upper_thr,
+                                bkg_bones_low=bkg_bones_low,
+                                bkg_bones_up=bkg_bones_up,
                                 obj_thr_gl=obj_gl_thr,
                                 obj_thr_bones=obj_thr_bones,
                                 scale=[single_scale],
@@ -99,6 +104,8 @@ def run_optimization(space_key, old_skf, n_calls,
                                     roi_lower_thr=params["roi_lower_thr"],
                                     bkg_lower_thr=params["bkg_lower_thr"],
                                     bkg_upper_thr=params["bkg_upper_thr"],
+                                    bkg_bones_low=params["bkg_bones_low"],
+                                    bkg_bones_up=params["bkg_bones_up"],
                                     obj_gl_thr=params["obj_gl_thr"],
                                     Lambda=params["Lambda"],
                                     single_scale=params["single_scale"],
