@@ -22,7 +22,6 @@ class LegImages :
 
         self.image = image
         self.mask = mask
-        pass
 
     def define_regions(self, bbox) :
 

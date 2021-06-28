@@ -156,6 +156,13 @@ def get_labeled_leg(leg1, leg2) :
     else :
         raise ValueError('No label found')
 
-# TODO apply_mask
-# TODO elementwise_multiplication
-# TODO image_addition
+
+def get_femur_head(image, mask=None):
+    '''
+    Since we are interested in the segmentation of the femur head, it is usefull
+    to compute the metrics only on this region.
+    This filter raturn only the upper 1/4 of the image, which will contain the
+    femur head
+    TODO: this function must be modified in order to get more robust outcomes
+    '''
+    pass

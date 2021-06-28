@@ -12,6 +12,21 @@ __email__ = ['riccardo.biondi7@unibo.it']
 # will help with the application slice by slice
 
 
+def erode(image, radius=1):
+    '''
+    '''
+    ImageType = itk.Image[itk.SS, 3]
+    StructuringElementType = itk.FlatStructuringElement[3]
+    structuringElement = StructuringElementType.Ball(int(radius))
+
+    ErodeFilterType = itk.BinaryErodeImageFilter[ImageType, ImageType, StructuringElementType]
+    erodeFilter = ErodeFilterType.New()
+    erodeFilter.SetInput(image)
+    erodeFilter.SetKernel(structuringElement)
+    erodeFilter.SetErodeValue(1)
+
+    return erodeFilter
+
 def binary_threshold(image, upper_thr, lower_thr,
                     in_value=1, out_val=0, out_type=None) :
     '''
@@ -282,7 +297,7 @@ def execute_pipeline(pipeline):
     return pipeline.GetOutput()
 
 
-def opening(image, radius=1, bkg=0, frg=1) :
+def opening(image, radius=1, bkg=0, frg=1, out_type=None) :
     '''
     Apply a Morphological opening on the targhet image
 
@@ -309,7 +324,7 @@ def opening(image, radius=1, bkg=0, frg=1) :
 
     # define the ball structuring element for the opening
     StructuringElementType = itk.FlatStructuringElement[Dim]
-    struct_element = StructuringElementType.Ball(radius)
+    struct_element = StructuringElementType.Ball(int(radius))
 
     # define the opening filter
     opening = itk.BinaryMorphologicalOpeningImageFilter[ImageType,
@@ -353,7 +368,7 @@ def distance_map(image, image_spacing=True) :
     return distance
 
 
-def unsharp_mask(image, sigma=1., amount=1., threhsold=0.):
+def unsharp_mask(image, sigma=.5, amount=1.0, threhsold=0.0):
     '''
     Initilize the Unsharp masking filter
     Parameters
@@ -373,7 +388,7 @@ def unsharp_mask(image, sigma=1., amount=1., threhsold=0.):
     ImageType = itk.Image[itk.template(image)[1]]
     um = itk.UnsharpMaskImageFilter[ImageType, ImageType].New()
     _ = um.SetInput(image)
-    _ = um.SetSigma(sigma)
+    _ = um.SetSigmas(sigma)
     _ = um.SetAmount(amount)
     _ = um.SetThreshold(threhsold)
 
@@ -480,3 +495,40 @@ def normalize_image_gl(image, roi=None, label=1):
     arr = np.float32(arr - mean) / np.float32(std)
 
     return array2image(arr, info)
+
+
+def invert_binary_image(image, out_type=itk.UC):
+    array, info = image2array(image)
+    array = (array == 0).astype(np.uint8)
+    out = array2image(array, info)
+
+    if out_type is not None:
+        out = cast_image(out, out_type)
+
+    return out
+
+
+def fill_holes_slice_by_slice(image, out_type=itk.SS):
+    '''
+    This filter is used to fill the holes of the image by found the connected
+    components of the complementary of each slice and settin the largest(the bkg)
+    to zero.
+    '''
+    PixelType, Dim = itk.template(image)[1]
+    #######print(PixelType)
+
+    # image filter type. The dimension is reduced by 1 because it will be
+    # applied slice by slice
+    ImageType = itk.Image[PixelType, 2]
+    OutputType = itk.Image[out_type, 2]
+    cc_filter = itk.ConnectedComponentImageFilter[ImageType, ImageType].New()
+
+    # invert the binary image
+    inverse = invert_binary_image(image)
+    connected_image = execute_pipeline(apply_pipeline_slice_by_slice(image=inverse, pipeline=cc_filter))
+    #now ensure that the largest connected component(image background) is
+    # labeled with 1 and remove it
+    connected_image = relabel_components(connected_image)
+    filled = binary_threshold(image=connected_image, upper_thr=2, lower_thr=1,
+                                in_value=0, out_val=1, out_type=out_type)
+    return filled
