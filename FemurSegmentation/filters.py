@@ -119,7 +119,6 @@ def median_filter(image, radius=1) :
 def connected_components(image, voxel_type=itk.SS) :
     '''
     '''
-
     ImageType = itk.Image[voxel_type, 3]
 
     cc = itk.ConnectedComponentImageFilter[ImageType, ImageType].New()
