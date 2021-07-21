@@ -531,3 +531,68 @@ def fill_holes_slice_by_slice(image, out_type=itk.SS):
     filled = binary_threshold(image=connected_image, upper_thr=2, lower_thr=1,
                                 in_value=0, out_val=1, out_type=out_type)
     return filled
+
+
+def binary_curvature_flow(image, number_of_iterations=1, frg=1):
+    '''
+    Make an instance of the curvature flow filter for binary images.
+
+    Parameters
+    ----------
+    image: itk.Image
+        binary image to apply the filter
+    number_of_iterations: int
+        number of time the fiter is iterated
+    frg: PixelType
+        value of the foreground voxels
+    Return
+    ------
+    instance: itk.BinaryMinMaxCurvatureFlowImageFilter instance
+    '''
+
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+
+    f = itk.BinaryMinMaxCurvatureFlowImageFilter[ImageType, ImageType].New()
+    _ = f.SetInput(image)
+    _ = f.SetThreshold(frg)
+    _ = f.SetNumberOfIterations(number_of_iterations)
+
+    return f
+
+
+def distance_map(image, use_image_spacing=True):
+    '''
+    '''
+    PixelType, Dim = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dim]
+
+    distance = itk.DanielssonDistanceMapImageFilter[ImageType, ImageType].New()
+    _ = distance.SetInput(image)
+    _ = distance.SetUseImageSpacing(use_image_spacing)
+
+    return distance
+
+
+
+def adjust_physical_space(in_image, ref_image, ImageType):
+    '''
+    '''
+
+    NNInterpolatorType = itk.NearestNeighborInterpolateImageFunction[ImageType,
+                                                                     itk.D]
+    interpolator = NNInterpolatorType.New()
+
+    TransformType = itk.IdentityTransform[itk.D, 3]
+    transformer = TransformType.New()
+    _ = transformer.SetIdentity()
+
+    resampler = itk.ResampleImageFilter[ImageType, ImageType].New()
+    _ = resampler.SetInterpolator(interpolator)
+    _ = resampler.SetTransform(transformer)
+    _ = resampler.SetUseReferenceImage(True)
+    _ = resampler.SetReferenceImage(ref_image)
+    _ = resampler.SetInput(in_image)
+    _ = resampler.Update()
+
+    return resampler.GetOutput()

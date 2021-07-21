@@ -86,7 +86,7 @@ class ImageReader :
 
     def DICOM2Volume(self) :
         '''
-        Will read a DICOM series and convert it into an image tensor
+        Will read a DICOM series and convert it into an itk Image tensor
         '''
         seriesGenerator = itk.GDCMSeriesFileNames.New()
         seriesGenerator.SetUseSeriesDetails(True)  # Use images metadata
@@ -189,7 +189,7 @@ class VolumeWriter :
         '''
         Write itk image as DICOM series
         '''
-        # of not exists, create the output directory
+        # if it does not exists, create the output directory
         _ = os.makedirs(self.path, exist_ok=True)
         slice_format = os.path.join(self.path, "%03d.dcm")
         largest_region = self.image.GetLargestPossibleRegion()

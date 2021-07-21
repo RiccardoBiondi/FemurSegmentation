@@ -19,7 +19,7 @@ from skopt import callbacks
 
 # third part librariess
 from FemurSegmentation.IOManager import ImageReader
-from FemurSegmentation.utils import cast_image, image2array
+from FemurSegmentation.utils import image2array
 from FemurSegmentation.metrics import dice_score
 from FemurSegmentation.filters import unsharp_mask, execute_pipeline
 from segment_femur import pre_processing, segmentation, post_processing
@@ -43,9 +43,9 @@ def view(image, idx=0):
 
 # dictionary which define the parameters generation process
 
-spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
-                          Real(0.0, 0.5, "uniform", name = "bkg_lower_thr"),
-                          Real(0.51, 1.2, "uniform", name = "bkg_upper_thr"),
+spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name="roi_lower_thr"),
+                          Real(0.0, 0.5, "uniform", name="bkg_lower_thr"),
+                          Real(0.51, 1.2, "uniform", name="bkg_upper_thr"),
                           Real(0.95, 1.5, "uniform", name="obj_gl_thr"),
                           Integer(25, 1000, "identity", name="Lambda"),
                           Real(0.1, 1.5, "uniform", name="single_scale"),
@@ -61,7 +61,7 @@ spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
                           Real(0.001, 0.1, "uniorm", name="bkg_bones_low"),
                           Real(0.2, 0.5, "uniform", name="bkg_bones_up")],
 
-          "double_gc" : [#pre_processing params
+          "double_gc" : [# pre_processing params
                         Real(0.25, 1.0, "uniorm", name="single_scale"),
                         Integer(-400, 0, 'identity', name="bkg_lower_thr"),
                         Integer(100, 200, "identity", name="bkg_upper_thr"),
@@ -82,6 +82,14 @@ spaces = {"gc_segment" : [Integer(-1000, 0, "identity", name = "roi_lower_thr"),
                         Real(0.1, 0.9, "uniform", name="post_bones_ms_thr"),
                         Categorical([1, 2, 3, 4, 5], name="opening_radius")]}
 
+
+all_arguments = {"double_gc" : ["single_scale", "bkg_lower_thr", "bkg_upper_thr",
+                                "obj_thr", "obj_bones_thr", "seg_multiscale_start",
+                                "seg_multiscale_step", "seg_number_of_scales",
+                                "seg_Lambda", "seg_bones_ms_thr", "erosion_radius",
+                                "post_multiscale_start", "post_multiscale_step",
+                                "post_number_of_scales", "post_Lambda",
+                                "post_bones_ms_thr", "opening_radius"]}
 
 def get_hip_joint_region(y_pred, y_true):
     '''
@@ -115,8 +123,8 @@ def get_hip_joint_region(y_pred, y_true):
 
     assert p_shape == t_shape
 
-    p_array = p_array[2 * p_shape[0] // 3 : ]
-    t_array = t_array[2 * t_shape[0] // 3 : ]
+    p_array = p_array[2 * p_shape[0] // 3 :]
+    t_array = t_array[2 * t_shape[0] // 3 :]
 
     return p_array, t_array
 
@@ -156,9 +164,9 @@ def run_segmentation(
                         opening_radius):
     image = execute_pipeline(unsharp_mask(image))
     roi, bkg, obj = pre_processing(image=image,
-                                               scale=[single_scale],
-                                               obj_thr=obj_thr,
-                                               obj_bones_thr=obj_bones_thr)
+                                    scale=[single_scale],
+                                    obj_thr=obj_thr,
+                                    obj_bones_thr=obj_bones_thr)
 
     seg_scales_max = seg_multiscale_start + seg_number_of_scales * seg_multiscale_step
     seg_scales = np.arange(seg_multiscale_start, seg_scales_max, seg_multiscale_step)
@@ -179,7 +187,9 @@ def run_segmentation(
                             bkg=bkg)
 
     return label
-#def run_segmentation(image, roi_lower_thr, bkg_lower_thr, bkg_upper_thr,
+
+
+# def run_segmentation(image, roi_lower_thr, bkg_lower_thr, bkg_upper_thr,
 #                    obj_gl_thr, Lambda, single_scale, obj_thr_bones,
 #                    sigma, multiscale_start, multiscale_step, number_of_scales,
 #                    unsharp_thr, unsharp_amount, unsharp_sigma, bone_ms_thr,
@@ -250,10 +260,10 @@ def run_optimization(space_key, old_skf, n_calls,
         print("{} +/- {}".format(np.mean(res), np.std(res)), flush=True)
         return np.mean(res)
 
-        #hds = []
+        # hds = []
 
         # split the image and the mask
-        #for im, msk in zip(images, masks) :
+        # for im, msk in zip(images, masks) :
 
         #    result = run_segmentation(image=im,
         #                            roi_lower_thr=params["roi_lower_thr"],
@@ -278,9 +288,9 @@ def run_optimization(space_key, old_skf, n_calls,
         #    hd = dice_score(msk, result)
         #    hds.append(hd)
 
-        #print("res : {} +/- {}".format(1 - np.mean(hds), np.std(hds)))
+        # print("res : {} +/- {}".format(1 - np.mean(hds), np.std(hds)))
 
-        #return 100 * (1 - np.mean(hds))
+        # return 100 * (1 - np.mean(hds))
 
     checkpoint_callback = callbacks.CheckpointSaver(outfile,
                                                     store_objective=False)
@@ -342,15 +352,14 @@ if __name__ == '__main__':
     images = []
     masks = []
 
-    image_path = '/mnt/d/Riccardo/Progetti/Aperti/FemurSegmentation/Data/Formatted/{}/{}.nrrd'
-    gt_path = '/mnt/d/Riccardo/Progetti/Aperti/FemurSegmentation/Data/Formatted/{}/{}_gt.nrrd'
-    names = ['D0062', 'D076']
-    outfile = '/mnt/d/Riccardo/Progetti/Aperti/FemurSegmentation/Data/opt.pkl'
-
+    image_path = 'D:\FemurSegmentation\DATA\Formatted\{}.nrrd'
+    gt_path = 'D:\FemurSegmentation\DATA\Formatted\{}_gt.nrrd'
+    names = ['D0062', 'D0176']
+    outfile = 'D:\FemurSegmentation\DATA\graph_cut_results\optimization\optimized_v2_train2.pkl'
     space_key = "double_gc"
     old_skf = ""
-    n_random_starts = 5
-    n_calls = 70
+    n_random_starts = 15
+    n_calls = 100
     init_seed = 101
 
     for name in names :
@@ -370,3 +379,11 @@ if __name__ == '__main__':
                             init_seed=init_seed)
     # Save final results
     skdump(result, outfile, store_objective=False)
+
+    optimum = skload(outfile)
+    x_iters = np.array(optimum.x_iters)
+    y_iters = np.array(list(optimum.func_vals))
+
+
+    for ag, v in zip(all_arguments['double_gc'], x_iters[np.argmin(y_iters)]):
+        print(" : ".join([ag, np.str(v)]))

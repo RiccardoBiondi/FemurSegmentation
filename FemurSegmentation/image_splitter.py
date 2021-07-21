@@ -8,6 +8,7 @@ from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import region_of_interest
 from FemurSegmentation.filters import label_image2shape_label_map
 from FemurSegmentation.filters import execute_pipeline
+from FemurSegmentation.filters import relabel_components
 
 
 __author__ = ['Riccardo Biondi']
@@ -48,7 +49,9 @@ class LegImages :
 
         binarized = binary_threshold(self.image, 3000, -400, out_type=itk.US)
         cc = connected_components(binarized, itk.US)
-        pipeline = label_image2shape_label_map(cc.GetOutput())
+        cc = execute_pipeline(cc)
+        cc = relabel_components(cc)
+        pipeline = label_image2shape_label_map(cc)
         label_map = execute_pipeline(pipeline)
 
         bbox = label_map.GetNthLabelObject(0).GetBoundingBox()
