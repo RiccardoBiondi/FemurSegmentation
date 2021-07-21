@@ -204,6 +204,9 @@ class TestReadAndWrite :
         redPixel, redDim = itk.template(redImage)[1]
         redArray = itk.GetArrayFromImage(redImage)
 
+        os.remove(path) # remove the file generated for the test
+
+
         assert redPixel == pixelType
         assert redDim == dimension
         assert np.isclose(redArray, inArray).all()
@@ -238,6 +241,11 @@ class TestReadAndWrite :
 
         redPixel, redDim = itk.template(redImage)[1]
         redArray = itk.GetArrayFromImage(redImage)
+
+        for f in os.listdir(dicom_path):
+            os.remove(os.path.join(dicom_path, f))
+        os.rmdir(dicom_path)
+
 
         assert redPixel == pixelType
         assert redDim == dimension
@@ -279,6 +287,13 @@ class TestReadAndWrite :
         redPixelType, redDimension = itk.template(redImage)[1]
         redArray = itk.GetArrayFromImage(redImage)
 
+        if as_dicom:
+            for f in os.listdir(path):
+                os.remove(os.path.join(path, f))
+            os.rmdir(path)
+        else:
+            os.remove(path)
+
         assert redDimension == dimension
         assert redPixelType == pixelType
         assert np.isclose(inArray, redArray).all()
@@ -317,6 +332,13 @@ class TestReadAndWrite :
 
         redPixelType, redDimension = itk.template(redImage)[1]
         redArray = itk.GetArrayFromImage(redImage)
+
+        if as_dicom:
+            for f in os.listdir(path):
+                os.remove(os.path.join(path, f))
+            os.rmdir(path)
+        else:
+            os.remove(path)
 
         assert redDimension == dimension
         assert redPixelType == pixelType
