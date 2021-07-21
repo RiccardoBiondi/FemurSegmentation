@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import os
+import sys
 import itk
 import argparse
-import platform
 import numpy as np
 
 from FemurSegmentation.utils import image2array
@@ -31,17 +30,13 @@ from FemurSegmentation.filters import adjust_physical_space
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
 
-
-# set the path to GraphCutSupport Library
-here = os.path.abspath(os.path.dirname(__file__))  # where this file is
-system = platform.system()  # what is my operative system?
-
-command = { "Windows" :
-            "Linux" : 
-
-}
-
-from GraphCutSupport import RunGraphCut
+try:
+    from GraphCutSupport import RunGraphCut
+except:
+    here = os.path.abspath(os.path.dirname(__file__))  # where this file is
+    var = ''.join([here, r"\lib\\"])
+    sys.path.append(var)
+    from GraphCutSupport import RunGraphCut
 
 __author__ = ['Riccardo Biondi']
 __email__ = ['riccardo.biondi7@unibo.it']
