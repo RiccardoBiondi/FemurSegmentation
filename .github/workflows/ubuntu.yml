@@ -42,7 +42,7 @@ jobs:
           - {os: ubuntu-20.04, cc: clang, cxx: clang++, cpp-version: 7, generator: Ninja}
           - {os: ubuntu-20.04, cc: clang, cxx: clang++, cpp-version: 8, generator: Ninja}
           - {os: ubuntu-20.04, cc: clang, cxx: clang++, cpp-version: 9, generator: Ninja}
-          - {os: ubuntu-20.04, cc: clang, cxx: clang++, cpp-version: 10,generator: Ninja}
+          #- {os: ubuntu-20.04, cc: clang, cxx: clang++, cpp-version: 10,generator: Ninja}
 
     steps:
     - name: Checkout
