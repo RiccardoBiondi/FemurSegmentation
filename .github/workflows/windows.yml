@@ -1,0 +1,54 @@
+name : Windows CI
+
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.cfg.os }}
+    name: ${{ matrix.cfg.os }}@${{ matrix.cfg.cxx }}-${{ matrix.cfg.cpp-version }}
+
+    strategy:
+      matrix:
+        cfg:
+          - {os: windows-latest, cc: cl, cxx: MSVC, cpp-version: 19.28.29333.0, generator: Ninja}
+          - {os: windows-latest, cc: cl, cxx: MSVC, cpp-version: 19.28.29333.0, generator: MinGW Makefiles}
+          - {os: windows-2016, cc: cl, cxx: MSVC, cpp-version: 19.16.27044.0, generator: Ninja}
+          - {os: windows-2016, cc: cl, cxx: MSVC, cpp-version: 19.16.27044.0, generator: MinGW Makefiles}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+      with:
+        submodules: recursive
+
+    - name: Get latest CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Get Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+        architecture: 'x64'
+
+    - name: Install python deps
+      run: |
+        python -m pip install -r requirements.txt
+
+    - name: Install testing deps:
+      run: |
+        python -m pip install pytest hypothesis codecov pytest-cov
+
+    - name: Install
+      run: |
+        python setup.py develop --user
+
+    - name: Test
+      run: |
+        python -m pytest
