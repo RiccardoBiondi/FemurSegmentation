@@ -116,7 +116,7 @@ class TestGraphCutLinks:
         assert np.all(inBkg == link.bkg)
         assert np.all(inRoi == link.roi)
         # now check that the default initialization is good
-        assert link.Lambda == 100.
+        assert link.Lambda == 50.
         assert link.sigma == .25
         # check number of voxels and vx_id
 
@@ -156,7 +156,7 @@ class TestGraphCutLinks:
         roi_arr = itk.GetArrayFromImage(roi)
 
         assert np.all(cost_source.shape == obj_arr.shape)
-        assert np.all(np.unique(cost_source[roi_arr != 0]) == [0, 1, 100])
+        assert np.all(np.unique(cost_source[roi_arr != 0]) == [0, 1, 50])
 
     @given(random_image_strategy(), st.floats(0.1, 1.5))
     @settings(max_examples=20, deadline=None,
@@ -195,9 +195,9 @@ class TestGraphCutLinks:
         bkg_arr = itk.GetArrayFromImage(bkg)
 
         assert np.all(cost_sink.shape == obj_arr.shape)
-        assert np.all(np.unique(cost_sink[roi_arr != 0]) == [0, 1, 100])
+        assert np.all(np.unique(cost_sink[roi_arr != 0]) == [0, 1, 50])
         assert np.all(np.unique(cost_sink[obj_arr != 0]) == 0)
-        assert np.all(np.unique(cost_sink[bkg_arr != 0]) == 100)
+        assert np.all(np.unique(cost_sink[bkg_arr != 0]) == 50)
 
 
 # TODO add test to nLink method

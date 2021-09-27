@@ -243,6 +243,7 @@ class TestReadAndWrite :
         redArray = itk.GetArrayFromImage(redImage)
 
         for f in os.listdir(dicom_path):
+            os.chmod(os.path.join(dicom_path, f), 777)
             os.remove(os.path.join(dicom_path, f))
         os.rmdir(dicom_path)
 
