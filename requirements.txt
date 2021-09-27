@@ -1,4 +1,4 @@
-itk==5.1.0
+itk>=5.1.0
 numpy
 matplotlib
 scikit-optimize
