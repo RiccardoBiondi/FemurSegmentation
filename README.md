@@ -4,8 +4,7 @@ A simple pipeline for the segmentation of femur CT scan segmentation based on Gr
 
 | **Authors**  | **Project** |  **Build Status** | **License** | **Code Quality** |
 |:------------:|:-----------:|:-----------------:|:-----------:|:----------------:|
-| [**R.Biondi**](https://github.com/RiccardoBiondi) | **FemurSegmentation** | [![Ubuntu CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Ubuntu%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/ubuntu.yml) [![Windows CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Windows%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/windows.yml)
-|[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
+| [**R.Biondi**](https://github.com/RiccardoBiondi) [**D. Dall'Olio**](https://github.com/DanieleDallOlio)| **FemurSegmentation** | [![Ubuntu CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Ubuntu%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/ubuntu.yml) [![Windows CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Windows%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/windows.yml) |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
 
 ## Table of Contents
 
@@ -22,10 +21,10 @@ A simple pipeline for the segmentation of femur CT scan segmentation based on Gr
 
 ## Usage
 
-Supported python versions: ![Python version](https://img.shields.io/badge/python-3.6.*|3.7.*|3.8.*-blue.svg)
+Supported python versions: ![Python version](https://img.shields.io/badge/python-3.6.*|3.7.*|3.8.*|3.9.*-blue.svg)
 
-Supported c++ compilers: ![g++ compiler](https://img.shields.io/badge/g++-7.*|8.*|9.*-orange.svg)
-![clang compiler](https://img.shields.io/badge/clang-3.*|4.*-red.svg)
+Supported c++ compilers: ![g++ compiler](https://img.shields.io/badge/g++-4.8|4.9|5.*|6.*|7.*|8.*|9.*|10.*-orange.svg)
+![clang compiler](https://img.shields.io/badge/clang-7.*|8.*|9.*-red.svg)
 ![MinGW compiler](https://img.shields.io/badge/MinGW-3.*|4.*-green.svg)
 
 ### Installation
@@ -101,6 +100,17 @@ where --input require a path to a file (like `filename.nrrd`) or to a folder con
 ## Acknowledgments
 
 ## Citation
+
+```BibTeX
+@misc{FemurSegmentation,
+  author = {Biondi, Riccardo and Dall'Olio, Daniele and Curti, Nico and Castellani, Gastone},
+  title = {A graph Cut Approach for Femur Segmentation},
+  year = {2021},
+  publisher = {GitHub},
+  howpublished = {\url{https://github.com/RiccardoBiondi/FemurSegmentation}},
+}
+```
+
 
 ## References
 
