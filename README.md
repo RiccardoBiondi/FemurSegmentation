@@ -4,7 +4,8 @@ A simple pipeline for the segmentation of femur CT scan segmentation based on Gr
 
 | **Authors**  | **Project** |  **Build Status** | **License** | **Code Quality** |
 |:------------:|:-----------:|:-----------------:|:-----------:|:----------------:|
-| [**R.Biondi**](https://github.com/RiccardoBiondi) | **FemurSegmentation** | **Windows**: **Linux**: [![Build Status](https://travis-ci.com/RiccardoBiondi/FemurSegmentation.svg?token=YRvqSXwHasrnEcL9EuWP&branch=master)](https://travis-ci.com/RiccardoBiondi/FemurSegmentation) |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
+| [**R.Biondi**](https://github.com/RiccardoBiondi) | **FemurSegmentation** | [![Ubuntu CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Ubuntu%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/ubuntu.yml) [![Windows CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Windows%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/windows.yml)
+|[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
 
 ## Table of Contents
 
@@ -89,9 +90,13 @@ where --input require a path to a file (like `filename.nrrd`) or to a folder con
 
 ## Authors
 
-* **Riccardo Biondi** [git](https://github.com/RiccardoBiondi)
+* **Riccardo Biondi** [git](https://github.com/RiccardoBiondi), [unibo](https://www.unibo.it/sitoweb/riccardo.biondi7)
+
 * **Daniele Dall'Olio** [git](https://github.com/DanieleDallOlio), [unibo](https://www.unibo.it/sitoweb/daniele.dallolio)
+
 * **Nico Curti** [git](https://github.com/Nico-Curti), [unibo](https://www.unibo.it/sitoweb/nico.curti2)
+
+* **Gastone Castellni** [unibo](https://www.unibo.it/sitoweb/gastone.castellani)
 
 ## Acknowledgments
 
