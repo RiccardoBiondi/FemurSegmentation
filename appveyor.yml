@@ -29,12 +29,17 @@ environment:
     VERSION: 38
     ARCH: x64
 
+  - COMPILER: vs
+    PYTHON: "C:\\Python39-x64"
+    VERSION: 39
+    ARCH: x64
+
 build: off
 
 install:
   # chack if python is correctly installed
   - "%PYTHON%\\python.exe --version"
-#  - cd %WORKSPACE%\FemurSegmentation
+  - cd %WORKSPACE%\FemurSegmentation
   # set up python
   - "%PYTHON%\\python.exe -m pip install -U pip"
   - "%PYTHON%\\python.exe -m pip install -r requirements.txt"
@@ -56,11 +61,6 @@ install:
   - move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
   - set PATH=C:\projects\deps\cmake\bin;%PATH%
   - cmake --version
-
-
-before_installation:
-  - - cd %WORKSPACE%\FemurSegmention
-
 
 install_script:
   - "%PYTHON%\\python.exe setup.py develop --user"
