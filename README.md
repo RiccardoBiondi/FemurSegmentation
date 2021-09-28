@@ -1,10 +1,12 @@
 # Femur Segmentation
 
-A simple pipeline for the segmentation of femur CT scan segmentation based on Graph Cut.
+A simple pipeline for the segmentation of femur CT scan based on Graph Cut.
 
 | **Authors**  | **Project** |  **Build Status** | **License** | **Code Quality** |
 |:------------:|:-----------:|:-----------------:|:-----------:|:----------------:|
-| [**R.Biondi**](https://github.com/RiccardoBiondi) [**D. Dall'Olio**](https://github.com/DanieleDallOlio)| **FemurSegmentation** | [![Ubuntu CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Ubuntu%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/ubuntu.yml) [![Windows CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Windows%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/windows.yml) |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy**  **Codebeat** |
+| [**R.Biondi**](https://github.com/RiccardoBiondi) <br/> [**D. Dall'Olio**](https://github.com/DanieleDallOlio)| **FemurSegmentation** | [![Ubuntu CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Ubuntu%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/ubuntu.yml) <br/> [![Windows CI](https://github.com/RiccardoBiondi/FemurSegmentation/workflows/Windows%20CI/badge.svg)](https://github.com/RiccardoBiondi/FemurSegmentation/actions/workflows/windows.yml) |[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()|**Codacy** [![Codacy Badge](https://app.codacy.com/project/badge/Grade/f07936f011b64e95b5e2bdcd7b8bc61f)](https://www.codacy.com/gh/RiccardoBiondi/FemurSegmentation/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=RiccardoBiondi/FemurSegmentation&amp;utm_campaign=Badge_Grade) <br/> **Codebeat** [![codebeat badge](https://codebeat.co/badges/a0131d28-4075-456c-9b69-7f3bac3f3d42)](https://codebeat.co/projects/github-com-riccardobiondi-femursegmentation-master)|
+
+**Appveyor** [![Build status](https://ci.appveyor.com/api/projects/status/o4yt5atxpnje9c9i?svg=true)](https://ci.appveyor.com/project/RiccardoBiondi/femursegmentation)
 
 ## Table of Contents
 
@@ -19,7 +21,7 @@ A simple pipeline for the segmentation of femur CT scan segmentation based on Gr
 
 ## Introduction
 
-## Usage
+## Prerequisites
 
 Supported python versions: ![Python version](https://img.shields.io/badge/python-3.6.*|3.7.*|3.8.*|3.9.*-blue.svg)
 
@@ -59,31 +61,85 @@ python setup.py develop --user
 
 ### Testing
 
-Any contribution is more than welcome. Just fill an [issue](./.github/ISSUE_TEMPLATE.md) or a [pull request](./.github/PULL_REQUEST_TEMPLATE.md) and we will check ASAP!
+We have provide a test routine in [test](./test) directory. This routine use:
+  - pytest >= 3.0.7
 
-See [here](https://github.com/RiccardoBiondi/FemurSegmentation/blob/master/CONTRIBUTING.md) for further informations about how to contribute with this project.
+  - hypothesis >= 4.13.0
 
-### Segmentation
+Please install these packages to perform the test.
+You can run the full set of test with:
 
-Make sure to add `/FemurSegmentation/lib` to your python library before running. On Ubuntu like os:
+```console
+  python -m pytest
+```
+
+
+## Getting Started
+
+Now we will see how to perform the automated and semi-automated segmentation.
+
+Make sure to add `/FemurSegmentation/lib` to your python library before running.
+
+On Ubuntu like os:
 ```console
 export PYTHONPATH=$PYTHONPATH:~/FemurSegmentation/lib/
 ```
 
-or for windows users()from PowerShell:
+or for windows users(from PowerShell):
 ```console
 $env:PYTHONPATH="C:\path\to\FemurSegmentation\lib\"
 ```
-To run the unsupervised segmentation:
+
+### Prepare Data
+
+This script will process one leg at a time. Firstly we have to split the whole CT scan into left and right leg. *split_image* script will perform this step:
+
 ```console
-python segment_femur.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd'
+  python split_image.py --input='path/to/input/image' --output='./output/file/name'
 ```
 
-where --input require a path to a file (like `filename.nrrd`) or to a folder containing a single DICOM series.
+You can also provide the ground truth segmentation to format the labels for each leg:
 
-### Evaluation
+```console
+  python split_image.py --input='/path/to/input/image' --output='/path/to/output/file/name' --label='/path/to/image/labels'
+```
+
+### Automated Segmentation
+
+Now you can segment one leg at time by running:
+
+```console
+python run_automated_segmentation.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd'
+```
+
+### Semi-Automated Segmentation
+
+To run the semi automated segmentation, you have to provide the hard constrains.
+To do so, you have to manually label six or seven slices of the whole scan.
+
+Label Legend:
+  - 0: No label
+  - 1: Femur
+  - 2: Background (Soft tissues, non-femur bones)
+
+**notes** Be careful on the hip-joint region
+
+To achieve this purpose, you can use 3DSlicer sofrtware.
+
+**note** The hard constrain mask must have the same size of the original image.
+
+Now you are ready to perform the segmentation:
+
+```console
+python run_semiautomated_segmentation.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd' --init='/path/to/init/hard/constrains'
+```
 
 ## Contribute
+
+Any contribution is more than welcome. Just fill an [issue](./.github/ISSUE_TEMPLATE.md) or a [pull request](./.github/PULL_REQUEST_TEMPLATE.md) and we will check ASAP!
+
+See [here](https://github.com/RiccardoBiondi/FemurSegmentation/blob/master/CONTRIBUTING.md) for further informations about how to contribute with this project.
+
 
 ## License
 
@@ -98,6 +154,8 @@ where --input require a path to a file (like `filename.nrrd`) or to a folder con
 * **Gastone Castellni** [unibo](https://www.unibo.it/sitoweb/gastone.castellani)
 
 ## Acknowledgments
+
+
 
 ## Citation
 

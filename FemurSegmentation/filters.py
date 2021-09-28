@@ -53,6 +53,12 @@ def binary_threshold(image, upper_thr, lower_thr,
     out_type : itk pixel type. Default None
         if specified cast the output voxel type to out_type
 
+    Return
+    ------
+
+    thr: itk.Image
+        binary thresholded image
+
     '''
     if isinstance(image, type(np.array)) :
         array = image.copy()
