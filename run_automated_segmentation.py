@@ -10,6 +10,7 @@ import numpy as np
 from FemurSegmentation.utils import image2array
 from FemurSegmentation.utils import array2image
 from FemurSegmentation.utils import cast_image
+from FemurSegmentation.utils import get_optimal_number_of_bins
 
 from FemurSegmentation.IOManager import ImageReader
 from FemurSegmentation.IOManager import VolumeWriter
@@ -26,14 +27,17 @@ from FemurSegmentation.filters import distance_map
 from FemurSegmentation.filters import add
 from FemurSegmentation.filters import median_filter
 from FemurSegmentation.filters import adjust_physical_space
+from FemurSegmentation.filters import itk_multiple_otsu_threshold
+from FemurSegmentation.filters import itk_threshold_below
 
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
 
 try:
     from GraphCutSupport import RunGraphCut
-except:
-    here = os.path.abspath(os.path.dirname(__file__))  # where this file is
+
+except ModuleNotFoundError:
+    here = os.path.abspath(os.path.dirname(__file__))
     var = ''.join([here, r"\lib\\"])
     sys.path.append(var)
     from GraphCutSupport import RunGraphCut
@@ -63,20 +67,124 @@ def parse_args():
     return args
 
 
-def pre_processing(image, roi_lower_thr=-400,
-                bkg_lower_thr=-400,
-                bkg_upper_thr=-25,
+
+def get_optimal_conditions(image, padding_thr=-1500):
+    '''
+    Determine the optimal condition to use to set the hard constrains for
+    the object, background and region of interest
+
+    Parameters
+    ----------
+    image: itk.Image
+        input image to use to compute the conditions
+    padding_thr: int
+        threhsold to use to remove the padding values
+    Returns
+    -------
+    '''
+
+    # remove the padding value from the image
+    noPad = execute_pipeline(itk_threshold_below(image, padding_thr))
+    noPad_array = itk.GetArrayFromImage(noPad)
+
+    # find the optimal number of bins
+    nob = get_optimal_number_of_bins(noPad_array.reshape(-1))
+
+    # compute multi otsu thresholding
+    noPad = cast_image(noPad, itk.SS)
+    multi_otsu = itk_multiple_otsu_threshold(noPad, histogram_bins=nob)
+    _ = multi_otsu.Update()
+
+    # these thresholds will be used to find the otimal hard constrains
+    thr_values = multi_otsu.GetThresholds()
+    # get conservative threshold for the obj (mu + 3 * sigma)
+    cond = (noPad_array > thr_values[1]) & (noPad_array < thr_values[2])
+    mu = np.mean(noPad_array[cond])
+    sigma = np.std(noPad_array[cond])
+
+    obj_thr = mu + 3 * sigma
+    #return the results
+
+    return [thr_values[0], thr_values[1], thr_values[2], obj_thr]
+
+
+def get_obj_condition(image, conservative_thr, strict_threshold):
+    '''
+    Will return the hard constrain based on the original image.
+    It will divide the image into two region. In the upper one, containing the
+    femur head and the hip-joint, will be applied the strict_threshold, that because
+    we want to be sure to exclude all these region between femur head and iliac
+    bones.
+    In the lowe region, we will apply the conservative_thr, in order to properly
+    define a first guess for the cortical bones. here there isn't the problem
+    of the hip joint region, so we want to be sure to take as much information
+    as possible. The non conservative threshold is applied also to be sure that
+    in the knee region s taken also for the subject with a low bone mineral
+    density(which have lower HU)
+    '''
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+    # Find the two image region
+    imsize = image.GetLargestPossibleRegion().GetSize()
+    middle = (4 * imsize[2]) // 5
+
+    RegionType = itk.ImageRegion[3]
+
+    lower_region = RegionType()
+    _ = lower_region.SetIndex([0,0,0])
+    _ = lower_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, middle - 1])
+
+    upper_region = RegionType()
+    _ = upper_region.SetIndex([0, 0, middle])
+    _ = upper_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, imsize[2] - 1])
+
+    ExtractRegionType = itk.RegionOfInterestImageFilter[ImageType, ImageType]
+
+    extract_lower = ExtractRegionType.New()
+    _ = extract_lower.SetInput(image)
+    _ = extract_lower.SetRegionOfInterest(lower_region)
+    _ = extract_lower.Update()
+    lower_image = extract_lower.GetOutput()
+
+    extract_upper = ExtractRegionType.New()
+    _ = extract_upper.SetInput(image)
+    _ = extract_upper.SetRegionOfInterest(upper_region)
+    _ = extract_upper.Update()
+    upper_image = extract_upper.GetOutput()
+
+    # now compute the binary condition
+    lower_array = itk.GetArrayFromImage(lower_image)
+    upper_array = itk.GetArrayFromImage(upper_image)
+
+    lcond = lower_array > conservative_thr
+    lower_array[lcond] = 1
+    lower_array[~lcond] = 0
+
+    ucond = upper_array > strict_threshold
+    upper_array[ucond] = 1
+    upper_array[~ucond] = 0
+
+    bone_cond = np.concatenate([lower_array, upper_array])
+
+    return bone_cond
+
+
+def pre_processing(image, #roi_lower_thr=-400,
+                #bkg_lower_thr=-400,
+                #bkg_upper_thr=-25,
                 # to exclude marrow bonesfrom the tissues in per-pixel term
                 bkg_bones_low=0.029,
                 bkg_bones_up=0.1,
-                obj_thr_gl=600,
+                #obj_thr_gl=600,
                 obj_thr_bones=0.3,
                 scale=[1.],
                 sigma=1.,
                 amount=1.,
                 thr=0.):
-    ROI = binary_threshold(image, 3000, roi_lower_thr, out_type=itk.SS)
-    ROI = execute_pipeline(erode(ROI, 4))
+
+    thresholds = get_optimal_conditions(image)
+    ROI = binary_threshold(image, 3000, thresholds[0], out_type=itk.SS)
+    ROI = execute_pipeline(erode(ROI, 6))
 
     # get the largest connected region(Body, will exclude the hospidal bed and
     # CT tube from the region of interest)
@@ -90,15 +198,17 @@ def pre_processing(image, roi_lower_thr=-400,
     boneness = bones.computeBonenessMeasure()
     boneness, _ = image2array(boneness)
 
+
+    obj_gl_cond = get_obj_condition(image, thresholds[3], thresholds[2])
     obj, info = image2array(image)
-    cond = (obj > obj_thr_gl) & (boneness > obj_thr_bones)
+    cond = (obj_gl_cond == 1) & (boneness > obj_thr_bones)
     obj[cond] = 1
     obj[~cond] = 0
 
     obj = array2image(obj, info)
 
     bkg, info = image2array(image)
-    cond = (bkg > bkg_lower_thr) & (bkg < bkg_upper_thr) & (boneness < bkg_bones_up)
+    cond = (bkg > thresholds[0]) & (bkg < thresholds[1]) & (boneness < bkg_bones_up)
     bkg[cond] = 1
     bkg[~cond] = 0
     bkg = array2image(bkg, info)
@@ -208,7 +318,7 @@ def segmentation_refinement(image, obj, roi):
     femur: itk.Image
         final segmentation results
     '''
-    _, info = iamge2array(image)
+    _, info = image2array(image)
     bkg = binary_threshold(image, upper_thr=0, lower_thr=-100, out_type=itk.UC)
 
     bones = Boneness(image, [0.75], roi)
@@ -239,6 +349,43 @@ def segmentation_refinement(image, obj, roi):
     return label
 
 
+def final_refinement_and_filling(image):
+    '''
+    This pipeline will perform the final filling and last refinement for the
+    refined graph cut
+    '''
+    # invert the image-> we want to find the complementary because we want to
+    # fill the image
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+    inverter = itk.InvertIntensityImageFilter[ImageType, ImageType].New()
+    _ = inverter.SetInput(image)
+    _ = inverter.SetMaximum(1)
+    _ = inverter.Update()
+    inverted = inverter.GetOutput()
+
+    #now, slice by slice, take all the connected components except the largest
+    # one, which is the background(remember that I have inverted the image)
+    negative = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 2],
+                                                itk.Image[itk.UC, 2]].New()
+
+    negative = apply_pipeline_slice_by_slice(inverted, negative)
+    negative = execute_pipeline(negative)
+    negative = binary_threshold(negative, 700, 1)
+
+    # now sum up the complementary and the image to refine
+    refined = add(image, negative)
+
+    # and finally take the largest connected region -> will remove all the
+    # spurious regions
+    cc = itk.ConnectedComponentImageFilter[itk.Image[itk.UC, 3], itk.Image[itk.UC, 3]].New()
+    _ = cc.SetInput(refined)
+    _ = cc.Update()
+    rel = relabel_components(cc.GetOutput())
+    refined = binary_threshold(rel, upper_thr=2, lower_thr=0)
+
+    return refined
+
 
 def main():
 
@@ -258,6 +405,8 @@ def main():
                                     ImageType=itk.Image[itk.UC, 3])
 
     labeled = segmentation_refinement(image, labeled, ROI)
+
+    labeled = final_refinement_and_filling(labeled)
 
     writer = VolumeWriter(path=args.output, image=labeled)
     _ = writer.write()

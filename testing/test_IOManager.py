@@ -13,7 +13,7 @@ import FemurSegmentation.IOManager as IOManager
 
 
 __author__ = ['Riccardo Biondi']
-__email__ = ['riccardo.biondi4@studio.unibo.it']
+__email__ = ['riccardo.biondi7@unibo.it']
 
 
 # ███████ ████████ ██████   █████  ████████ ███████  ██████  ██ ███████ ███████

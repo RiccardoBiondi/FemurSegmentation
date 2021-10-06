@@ -39,9 +39,6 @@ def cast_image(image, new_pixel_type) :
     return castImageFilter.GetOutput()
 
 
-
-
-
 def image2array(image) :
     '''
     Return the image array and a dictionary containing the spatial information
@@ -63,7 +60,6 @@ def image2array(image) :
     array = itk.GetArrayFromImage(image)
 
     return array, info
-
 
 
 def array2image(image_array, spatial_info = None) :
@@ -88,7 +84,6 @@ def array2image(image_array, spatial_info = None) :
         _ = set_image_spatial_info(image, spatial_info)
 
     return image
-
 
 
 def get_image_spatial_info(image) :
@@ -119,7 +114,6 @@ def get_image_spatial_info(image) :
             'Upper Index' : upperIndex}
 
 
-
 def set_image_spatial_info(image, info) :
     '''
     Set the image spatial information to info
@@ -135,7 +129,6 @@ def set_image_spatial_info(image, info) :
     _ = image.GetLargestPossibleRegion().SetSize(info['Size'])
     _ = image.GetLargestPossibleRegion().SetIndex(info['Index'])
     _ = image.GetLargestPossibleRegion().SetUpperIndex(info['Upper Index'])
-
 
 
 def get_labeled_leg(leg1, leg2) :
@@ -166,3 +159,35 @@ def get_femur_head(image, mask=None):
     TODO: this function must be modified in order to get more robust outcomes
     '''
     pass
+
+
+def get_optimal_number_of_bins(im_array):
+    '''
+    Return the optimal number of bins for the histogram using the
+    Freedman-Diaconis rule.
+    Since the results of the computation may not be an integer, a flooring is
+    applied
+
+    Parameters
+    ----------
+    im_array: np.array
+        1-D array containing all the voxels to use to compute the histogram
+
+    Returns
+    -------
+    nob: int
+        number of bins.
+    '''
+
+    # compute the inter quartile range
+    q1 = np.percentile(im_array.reshape(-1), q=25)
+    q3 = np.percentile(im_array.reshape(-1), q=75)
+    IQR = q3 - q1
+
+    # compute the bin width
+    h = 2 * IQR * np.power(im_array.size, - 1/3)
+
+    # compute the optimal number of bins
+    nob = (np.max(im_array) - np.min(im_array)) // h
+
+    return int(nob)

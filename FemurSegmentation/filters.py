@@ -77,6 +77,27 @@ def binary_threshold(image, upper_thr, lower_thr,
     return thr
 
 
+def itk_threshold(image, upper_thr=None, lower_thr=None):
+    '''
+    '''
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[itk.UC, Dimension]
+
+
+def itk_threshold_below(image, thr, outside_value=-1024):
+    '''
+    '''
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    thr_filter = itk.ThresholdImageFilter[ImageType].New()
+    _ = thr_filter.SetInput(image)
+    _ = thr_filter.SetOutsideValue(outside_value)
+    _ = thr_filter.ThresholdBelow(thr)
+
+    return thr_filter
+
+
 def threshold(image, upper_thr, lower_thr, outside_value=-1500, out_type=None):
     '''
     Assign to all the voxels outside [lower_thr, upper_thr] the value : outside_value
@@ -602,3 +623,34 @@ def adjust_physical_space(in_image, ref_image, ImageType):
     _ = resampler.Update()
 
     return resampler.GetOutput()
+
+
+
+def itk_multiple_otsu_threshold(image, number_of_thresholds=3,
+                                histogram_bins=128, out_value=0):
+    '''
+    Instantiate the itk multiple otsu threshold. The filter is not updated
+
+    Parameters
+    ----------
+    image: itk.Image
+        image from which compute the threshold values
+    number_of_thresholds: int
+        number of threshold to consider
+    histogram_bins: int
+        number of histogram bins
+    Return
+    ------
+    multi_otsu: itk.OtsuMultipleThresholdsImageFilter
+    '''
+    # prepare the image types for filter initialization
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    # now initialize the filter
+    multi_otsu = itk.OtsuMultipleThresholdsImageFilter[ImageType, ImageType].New()
+    _ = multi_otsu.SetInput(image)
+    _ = multi_otsu.SetNumberOfHistogramBins(histogram_bins)
+    _ = multi_otsu.SetNumberOfThresholds(number_of_thresholds)
+
+    return multi_otsu
