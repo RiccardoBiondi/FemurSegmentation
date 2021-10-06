@@ -654,3 +654,34 @@ def itk_multiple_otsu_threshold(image, number_of_thresholds=3,
     _ = multi_otsu.SetNumberOfThresholds(number_of_thresholds)
 
     return multi_otsu
+
+
+def itk_binary_morphological_closing(image, radius=1, frg=1, bkg=0):
+
+    # retrieve image information
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+    # define the structuring element
+    StructuringElementType = itk.FlatStructuringElement[Dimension]
+    structuringElement = StructuringElementType.Ball(int(radius))
+    # and now the closing filter
+    closing = itk.BinaryMorphologicalClosingImageFilter[ImageType,
+                                                        ImageType,
+                                                        StructuringElementType].New()
+    _ = closing.SetForegroundValue(frg)
+    _ = closing.SetInput(image)
+
+    return closing
+
+
+
+def itk_invert_intensity(image, maximum=1):
+
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    inverter = itk.InvertIntensityImageFilter[ImageType, ImageType].New()
+    _ = inverter.SetInput(image)
+    _ = inverter.SetMaximum(maximum)
+
+    return inverter

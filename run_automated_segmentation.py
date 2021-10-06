@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
 import sys
 import itk
 import argparse
+import platform
 import numpy as np
 
 from FemurSegmentation.utils import image2array
@@ -29,6 +30,8 @@ from FemurSegmentation.filters import median_filter
 from FemurSegmentation.filters import adjust_physical_space
 from FemurSegmentation.filters import itk_multiple_otsu_threshold
 from FemurSegmentation.filters import itk_threshold_below
+from FemurSegmentation.filters import itk_binary_morphological_closing
+from FemurSegmentation.filters import itk_invert_intensity
 
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
@@ -37,8 +40,17 @@ try:
     from GraphCutSupport import RunGraphCut
 
 except ModuleNotFoundError:
+
+    lib = {'Linux' : '/lib/',
+            'Windows' : r"\lib\\",
+            'linux' : '/lib/',
+            'windows' : r"\lib\\",
+            'ubuntu' : '/lib/',
+            'win32' : r"/lib//"}
+    #in which OS I am??
+
     here = os.path.abspath(os.path.dirname(__file__))
-    var = ''.join([here, r"\lib\\"])
+    var = ''.join([here, lib[sys.platform]])
     sys.path.append(var)
     from GraphCutSupport import RunGraphCut
 
@@ -102,6 +114,7 @@ def get_optimal_conditions(image, padding_thr=-1500):
     mu = np.mean(noPad_array[cond])
     sigma = np.std(noPad_array[cond])
 
+    # TODO: change with obj_thr = median + 5 * IQR
     obj_thr = mu + 3 * sigma
     #return the results
 
@@ -126,12 +139,18 @@ def get_obj_condition(image, conservative_thr, strict_threshold):
     ImageType = itk.Image[PixelType, Dimension]
     # Find the two image region
     imsize = image.GetLargestPossibleRegion().GetSize()
-    middle = (4 * imsize[2]) // 5
+
+    tibia_idx = imsize[2] // 15
+    middle = (2 * imsize[2]) // 3
 
     RegionType = itk.ImageRegion[3]
 
+    tibia_region = RegionType()
+    _ = tibia_region.SetIndex([0, 0, 0])
+    _ = tibia_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, tibia_idx - 1])
+
     lower_region = RegionType()
-    _ = lower_region.SetIndex([0,0,0])
+    _ = lower_region.SetIndex([0, 0, tibia_idx])
     _ = lower_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, middle - 1])
 
     upper_region = RegionType()
@@ -139,6 +158,12 @@ def get_obj_condition(image, conservative_thr, strict_threshold):
     _ = upper_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, imsize[2] - 1])
 
     ExtractRegionType = itk.RegionOfInterestImageFilter[ImageType, ImageType]
+
+    extract_tibia = ExtractRegionType.New()
+    _ = extract_tibia.SetInput(image)
+    _ = extract_tibia.SetRegionOfInterest(tibia_region)
+    _ = extract_tibia.Update()
+    tibia_image = extract_tibia.GetOutput()
 
     extract_lower = ExtractRegionType.New()
     _ = extract_lower.SetInput(image)
@@ -153,8 +178,11 @@ def get_obj_condition(image, conservative_thr, strict_threshold):
     upper_image = extract_upper.GetOutput()
 
     # now compute the binary condition
+    tibia_array = itk.GetArrayFromImage(tibia_image)
     lower_array = itk.GetArrayFromImage(lower_image)
     upper_array = itk.GetArrayFromImage(upper_image)
+
+    tibia_array[tibia_array > -3000] = 0
 
     lcond = lower_array > conservative_thr
     lower_array[lcond] = 1
@@ -164,7 +192,7 @@ def get_obj_condition(image, conservative_thr, strict_threshold):
     upper_array[ucond] = 1
     upper_array[~ucond] = 0
 
-    bone_cond = np.concatenate([lower_array, upper_array])
+    bone_cond = np.concatenate([tibia_array, lower_array, upper_array])
 
     return bone_cond
 
@@ -258,6 +286,39 @@ def segment(image, obj, bkg, ROI, scales=[.5, .75], sigma=.25,
     return labeled
 
 
+def post_processing_and_hole_filling(image):
+    '''
+    Refine the segmentation by filling the holes, removing the spurious region
+    and selecting the largest connected region (the femur)
+    '''
+    ImageType = itk.Image[itk.SS, 2]
+    closing = itk_binary_morphological_closing(image)
+    median = execute_pipeline(median_filter(closing.GetOutput()))
+    median = cast_image(median, itk.SS)
+
+    connected = execute_pipeline(connected_components(median))
+    relabeled = relabel_components(connected)
+    filled = binary_threshold(relabeled, upper_thr=2, lower_thr=0)
+
+    # now fill the image by finding its complementary slice by slice.
+
+    # first of all invert the image
+    inverted = execute_pipeline(itk_invert_intensity(filled))
+    cc = itk.ConnectedComponentImageFilter[ImageType, ImageType].New()
+    negative = apply_pipeline_slice_by_slice(inverted, cc)
+    negative = execute_pipeline(negative)
+    # take all the connected components except the largest one which is the background
+    negative = binary_threshold(negative, lower_thr=1, upper_thr=700)
+
+    # now sum the image and its complementary to find the filled one
+    final = add(filled, negative)
+
+    return final
+
+
+    return filled
+
+
 def post_processing(labeled):
 
     labeled = cast_image(labeled, itk.F)
@@ -294,6 +355,8 @@ def post_processing(labeled):
     cc_im = execute_pipeline(cc)
     rel = relabel_components(cc_im)
     filled = binary_threshold(rel, 2, 0, out_type=itk.UC)
+
+    # nw fill slice by slice
 
     return filled
 
@@ -398,15 +461,21 @@ def main():
 
     image, ROI, bkg, obj = pre_processing(image=image)
     labeled = segment(image=image, obj=obj, bkg=bkg, ROI=ROI)
-    labeled = post_processing(labeled=labeled)
+    labeled = post_processing_and_hole_filling(labeled)
+
+    # now the second graph cut
+    labeled = segment(image=image, obj=labeled, bkg=bkg, ROI=ROI, scales=[.75],
+                      sigma=.5, Lambda=1000, bone_ms_thr=0.0)
+    labeled = post_processing_and_hole_filling(labeled)
+    #labeled = post_processing(labeled=labeled)
 
     labeled = adjust_physical_space(in_image=labeled,
                                     ref_image=image,
                                     ImageType=itk.Image[itk.UC, 3])
 
-    labeled = segmentation_refinement(image, labeled, ROI)
+    #labeled = segmentation_refinement(image, labeled, ROI)
 
-    labeled = final_refinement_and_filling(labeled)
+    #labeled = final_refinement_and_filling(labeled)
 
     writer = VolumeWriter(path=args.output, image=labeled)
     _ = writer.write()
