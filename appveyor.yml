@@ -54,7 +54,7 @@ install:
   - git submodule -q update --init --recursive
   - cd %WORKSPACE%\
 
-  # install a recent cmak
+  # install a recent cmake
   - set CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-win64-x64.zip"
   - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
   - 7z x cmake.zip -oC:\projects\deps > nul
@@ -62,9 +62,10 @@ install:
   - set PATH=C:\projects\deps\cmake\bin;%PATH%
   - cmake --version
 
-install_script:
+  #install the repo
   - "%PYTHON%\\python.exe setup.py develop --user"
 
+# execute the tests
 test_script:
   -  "%PYTHON%\\Scripts\\pytest.exe" # ??
   - exit 0
