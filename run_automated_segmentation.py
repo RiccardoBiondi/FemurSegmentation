@@ -21,10 +21,7 @@ from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import relabel_components
 from FemurSegmentation.filters import erode
-from FemurSegmentation.filters import binary_curvature_flow
-from FemurSegmentation.filters import iterative_hole_filling
 from FemurSegmentation.filters import apply_pipeline_slice_by_slice
-from FemurSegmentation.filters import distance_map
 from FemurSegmentation.filters import add
 from FemurSegmentation.filters import median_filter
 from FemurSegmentation.filters import adjust_physical_space
@@ -32,6 +29,8 @@ from FemurSegmentation.filters import itk_multiple_otsu_threshold
 from FemurSegmentation.filters import itk_threshold_below
 from FemurSegmentation.filters import itk_binary_morphological_closing
 from FemurSegmentation.filters import itk_invert_intensity
+from FemurSegmentation.filters import itk_otsu_threshold
+from FemurSegmentation.filters import region_of_interest
 
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
@@ -95,30 +94,60 @@ def get_optimal_conditions(image, padding_thr=-1500):
     -------
     '''
 
-    # remove the padding value from the image
+    # first find the bounding values The first one will be the lowest values
+    # which allws to remove the air, the last one the outliers value
+    # the first thing we have to do is the removal of the padding value and set
+    # their value to the one of the air
+
+
+
+    # remove the padding value from the image and setting its value to -1024
     noPad = execute_pipeline(itk_threshold_below(image, padding_thr))
     noPad_array = itk.GetArrayFromImage(noPad)
 
     # find the optimal number of bins
     nob = get_optimal_number_of_bins(noPad_array.reshape(-1))
 
-    # compute multi otsu thresholding
+    # compute multi-otsu thresholding
     noPad = cast_image(noPad, itk.SS)
-    multi_otsu = itk_multiple_otsu_threshold(noPad, histogram_bins=nob)
+    multi_otsu = itk_multiple_otsu_threshold(noPad,
+                                             number_of_thresholds=3,
+                                             histogram_bins=nob)
     _ = multi_otsu.Update()
 
     # these thresholds will be used to find the otimal hard constrains
     thr_values = multi_otsu.GetThresholds()
-    # get conservative threshold for the obj (mu + 3 * sigma)
-    cond = (noPad_array > thr_values[1]) & (noPad_array < thr_values[2])
-    mu = np.mean(noPad_array[cond])
-    sigma = np.std(noPad_array[cond])
 
-    # TODO: change with obj_thr = median + 5 * IQR
-    obj_thr = mu + 3 * sigma
-    #return the results
+    # now find the upper bound for the background by applying an Otsu threshold
+    # inside the region (-500, 500) in which we are sure there is the most of the
+    # soft tissue
+    soft_tissue_mask = binary_threshold(image, upper_thr=500, lower_thr=-500)
+    #find the optimal number of threshold
+    cond = (noPad_array > -500) & (noPad_array < 500)
+    nob = get_optimal_number_of_bins(noPad_array[cond])
+    otsu = itk_otsu_threshold(image=image, nbins=nob, mask_image=soft_tissue_mask)
+    _ = otsu.Update()
+    bkg_upper_thr = otsu.GetThreshold()
 
-    return [thr_values[0], thr_values[1], thr_values[2], obj_thr]
+
+
+    #finally estimate the conservative threshold for the image
+    cond = (noPad_array > bkg_upper_thr)
+    median = np.median(noPad_array[cond])
+    q1 = np.percentile(noPad_array[cond], 25)
+    q3 = np.percentile(noPad_array[cond], 75)
+
+    obj_thr = median + 5 * (q3 - q1)
+    #lower_bound = np.max([thr_values[0], -500])
+    lower_bound = thr_values[0]
+    print('Lower Bound: {}'.format(lower_bound))
+    print('Bkg Upper bound: {}'.format(bkg_upper_thr))
+    print('Conservative bone threshold: {}'.format(obj_thr))
+    print('Strict bone threshold: {}'.format(thr_values[2]))
+
+
+    # lower threshold. upper bkg thr, conservative bone thr, strict bone thr
+    return [lower_bound, bkg_upper_thr, obj_thr, thr_values[2]]
 
 
 def get_obj_condition(image, conservative_thr, strict_threshold):
@@ -157,32 +186,18 @@ def get_obj_condition(image, conservative_thr, strict_threshold):
     _ = upper_region.SetIndex([0, 0, middle])
     _ = upper_region.SetUpperIndex([imsize[0] - 1, imsize[1] - 1, imsize[2] - 1])
 
-    ExtractRegionType = itk.RegionOfInterestImageFilter[ImageType, ImageType]
-
-    extract_tibia = ExtractRegionType.New()
-    _ = extract_tibia.SetInput(image)
-    _ = extract_tibia.SetRegionOfInterest(tibia_region)
-    _ = extract_tibia.Update()
-    tibia_image = extract_tibia.GetOutput()
-
-    extract_lower = ExtractRegionType.New()
-    _ = extract_lower.SetInput(image)
-    _ = extract_lower.SetRegionOfInterest(lower_region)
-    _ = extract_lower.Update()
-    lower_image = extract_lower.GetOutput()
-
-    extract_upper = ExtractRegionType.New()
-    _ = extract_upper.SetInput(image)
-    _ = extract_upper.SetRegionOfInterest(upper_region)
-    _ = extract_upper.Update()
-    upper_image = extract_upper.GetOutput()
+    # extract the region of interest
+    tibia_image = execute_pipeline(region_of_interest(image, tibia_region))
+    lower_image = execute_pipeline(region_of_interest(image, lower_region))
+    upper_image = execute_pipeline(region_of_interest(image, upper_region))
 
     # now compute the binary condition
     tibia_array = itk.GetArrayFromImage(tibia_image)
     lower_array = itk.GetArrayFromImage(lower_image)
     upper_array = itk.GetArrayFromImage(upper_image)
 
-    tibia_array[tibia_array > -3000] = 0
+    # this not-> can stay here
+    tibia_array[tibia_array > -5000] = 0
 
     lcond = lower_array > conservative_thr
     lower_array[lcond] = 1
@@ -201,7 +216,7 @@ def pre_processing(image, #roi_lower_thr=-400,
                 #bkg_lower_thr=-400,
                 #bkg_upper_thr=-25,
                 # to exclude marrow bonesfrom the tissues in per-pixel term
-                bkg_bones_low=0.029,
+#                bkg_bones_low=0.029,
                 bkg_bones_up=0.1,
                 #obj_thr_gl=600,
                 obj_thr_bones=0.3,
@@ -227,7 +242,7 @@ def pre_processing(image, #roi_lower_thr=-400,
     boneness, _ = image2array(boneness)
 
 
-    obj_gl_cond = get_obj_condition(image, thresholds[3], thresholds[2])
+    obj_gl_cond = get_obj_condition(image, thresholds[2], thresholds[3])
     obj, info = image2array(image)
     cond = (obj_gl_cond == 1) & (boneness > obj_thr_bones)
     obj[cond] = 1
@@ -456,7 +471,7 @@ def main():
     args = parse_args()
 
     # read the image to process
-    reader = ImageReader(path=args.input, image_type=itk.Image[itk.F, 3])
+    reader = ImageReader(path=args.input, image_type=itk.Image[itk.SS, 3])
     image = reader.read()
 
     image, ROI, bkg, obj = pre_processing(image=image)

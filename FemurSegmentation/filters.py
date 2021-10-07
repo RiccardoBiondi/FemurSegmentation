@@ -77,13 +77,6 @@ def binary_threshold(image, upper_thr, lower_thr,
     return thr
 
 
-def itk_threshold(image, upper_thr=None, lower_thr=None):
-    '''
-    '''
-    PixelType, Dimension = itk.template(image)[1]
-    ImageType = itk.Image[itk.UC, Dimension]
-
-
 def itk_threshold_below(image, thr, outside_value=-1024):
     '''
     '''
@@ -670,6 +663,7 @@ def itk_binary_morphological_closing(image, radius=1, frg=1, bkg=0):
                                                         StructuringElementType].New()
     _ = closing.SetForegroundValue(frg)
     _ = closing.SetInput(image)
+    _ = closing.SetKernel(structuringElement)
 
     return closing
 
@@ -685,3 +679,17 @@ def itk_invert_intensity(image, maximum=1):
     _ = inverter.SetMaximum(maximum)
 
     return inverter
+
+
+def itk_otsu_threshold(image, nbins=128, mask_image=None, mask_value=1):
+
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    otsu = itk.OtsuThresholdImageFilter[ImageType, ImageType].New()
+    _ = otsu.SetInput(image)
+    _ = otsu.SetMaskImage(mask_image)
+    _ = otsu.SetMaskValue(mask_value)
+    _ = otsu.SetNumberOfHistogramBins(nbins)
+
+    return otsu
