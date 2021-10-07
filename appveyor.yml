@@ -63,6 +63,7 @@ install:
   - cmake --version
 
   #install the repo
+  - cd %WORKSPACE%\FemurSegmentation
   - "%PYTHON%\\python.exe setup.py develop --user"
 
 # execute the tests
