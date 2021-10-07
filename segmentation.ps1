@@ -40,7 +40,7 @@ For ($i = 0; $i -lt $files.Length; $i++)
   $BaseName = $BaseName -replace "\..+"
   $leg_name = $output_dir + $BaseName + +".nrrd"
 
-  python3 ./segment_femur.py --input $files[$i] --output $leg_name
+  python3 ./run_automated_segmentation.py --input $files[$i] --output $leg_name
   If ( $? )
   {
     Write-Output  -InputObject "[done]"
