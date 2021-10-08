@@ -693,3 +693,48 @@ def itk_otsu_threshold(image, nbins=128, mask_image=None, mask_value=1):
     _ = otsu.SetNumberOfHistogramBins(nbins)
 
     return otsu
+
+
+def itk_danielsson_distance_map(image, use_image_spacing=True, squared_distance=False):
+
+    ImageType = itk.Image[itk.SS, 3]
+    OutputType = itk.Image[itk.F, 3]
+
+    distance = itk.DanielssonDistanceMapImageFilter[ImageType, OutputType].New()
+    _ = distance.SetInput(image)
+    _ = distance.SetUseImageSpacing(use_image_spacing)
+    _ = distance.SetSquaredDistance(squared_distance)
+
+    return distance
+
+
+def itk_maximum(image1, image2):
+
+    ImageType = itk.Image[itk.F, 3]
+
+    maximum = itk.MaximumImageFilter[ImageType, ImageType, ImageType].New()
+    _ = maximum.SetInput(0, image1)
+    _ = maximum.SetInput(1, image2)
+
+    return maximum
+
+
+def itk_abs(image):
+
+    abs = itk.AbsImageFilter.New(image)
+
+    return abs
+
+def itk_mask_image_filter(image, mask, out_value=0, masking_value=1):
+    ImageType = itk.Image[itk.F, 3]
+    MaskType = itk.Image[itk.SS, 3]
+
+    masker = itk.MaskImageFilter[ImageType,
+                                 MaskType,
+                                 ImageType].New()
+    _ = masker.SetOutsideValue(out_value)
+    _ = masker.SetMaskingValue(masking_value)
+    _ = masker.SetInput(image)
+    _ = masker.SetMaskImage(mask)
+
+    return masker
