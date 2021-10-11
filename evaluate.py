@@ -16,7 +16,7 @@ from FemurSegmentation.filters import adjust_physical_space
 
 from FemurSegmentation.metrics import itk_label_overlapping_measures
 from FemurSegmentation.metrics import itk_hausdorff_distance
-from FemurSegmentation.metrics import itk_distance_map_source_to_target
+from FemurSegmentation.metrics import itk_hausdorff_distance_map
 
 # %%
 
@@ -78,7 +78,7 @@ def main(source_path, target_path, compute_distance_map=False):
     distance_map = None
 
     if compute_distance_map:
-        distance_map = itk_distance_map_source_to_target(source, target)
+        distance_map = itk_hausdorff_distance_map(source, target)
 
     dict = {'Patient Name' : [name],
             'Dice Coefficient' : [measures.GetDiceCoefficient()],

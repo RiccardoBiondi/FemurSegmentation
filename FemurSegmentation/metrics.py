@@ -35,12 +35,32 @@ def itk_hausdorff_distance(source_image, target_image, use_image_spacing=True):
     return hd
 
 
+def itk_hausdorff_distance_map(source_image, target_image, padding=0):
+    '''
+    '''
+
+    source2target = itk_distance_map_source_to_target(source_image,
+                                                      target_image,
+                                                      padding)
+    target2source = itk_distance_map_source_to_target(target_image,
+                                                      source_image,
+                                                      padding)
+    _ = source2target.Update()
+    _ = target2source.Update()
+
+    hd_map = itk_maximum(source2target.GetOutput(), target2source.GetOutput())
+
+    return hd_map
+
+
 def itk_distance_map_source_to_target(source_image, target_image, padding=0):
     '''
     '''
 
-    distance = itk_danielsson_distance_map(source_image)
-    distance_source2target = itk_mask_image_filter(adjusted.GetOutput(),
+    source = cast_image(source_image, itk.F)
+    distance = itk_danielsson_distance_map(source)
+    _ = distance.Update()
+    distance_source2target = itk_mask_image_filter(distance.GetOutput(),
                                                    target_image, masking_value=0,
                                                    out_value=padding)
 

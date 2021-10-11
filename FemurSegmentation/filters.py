@@ -697,7 +697,7 @@ def itk_otsu_threshold(image, nbins=128, mask_image=None, mask_value=1):
 
 def itk_danielsson_distance_map(image, use_image_spacing=True, squared_distance=False):
 
-    ImageType = itk.Image[itk.SS, 3]
+    ImageType = itk.Image[itk.F, 3]
     OutputType = itk.Image[itk.F, 3]
 
     distance = itk.DanielssonDistanceMapImageFilter[ImageType, OutputType].New()
