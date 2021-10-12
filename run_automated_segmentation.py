@@ -251,7 +251,7 @@ def pre_processing(image, #roi_lower_thr=-400,
     obj = array2image(obj, info)
 
     bkg, info = image2array(image)
-    cond = (bkg > thresholds[0]) & (bkg < thresholds[1]) & (boneness < bkg_bones_up)
+    cond = (bkg > thresholds[0]) & (bkg < thresholds[1]) & (boneness < 0.15) & (boneness > -0.15)
     bkg[cond] = 1
     bkg[~cond] = 0
     bkg = array2image(bkg, info)
@@ -479,9 +479,9 @@ def main():
     labeled = post_processing_and_hole_filling(labeled)
 
     # now the second graph cut
-    labeled = segment(image=image, obj=labeled, bkg=bkg, ROI=ROI, scales=[.75],
-                      sigma=.5, Lambda=1000, bone_ms_thr=0.0)
-    labeled = post_processing_and_hole_filling(labeled)
+    #labeled = segment(image=image, obj=labeled, bkg=bkg, ROI=ROI, scales=[.75],
+    #                  sigma=.5, Lambda=1000, bone_ms_thr=0.0)
+    #labeled = post_processing_and_hole_filling(labeled)
     #labeled = post_processing(labeled=labeled)
 
     labeled = adjust_physical_space(in_image=labeled,
