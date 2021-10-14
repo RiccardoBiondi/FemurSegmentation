@@ -21,6 +21,7 @@ from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import relabel_components
 from FemurSegmentation.filters import erode
+from FemurSegmentation.filters import dilate
 from FemurSegmentation.filters import apply_pipeline_slice_by_slice
 from FemurSegmentation.filters import add
 from FemurSegmentation.filters import median_filter
@@ -28,6 +29,7 @@ from FemurSegmentation.filters import adjust_physical_space
 from FemurSegmentation.filters import itk_multiple_otsu_threshold
 from FemurSegmentation.filters import itk_threshold_below
 from FemurSegmentation.filters import itk_binary_morphological_closing
+from FemurSegmentation.filters import itk_binary_morphological_opening
 from FemurSegmentation.filters import itk_invert_intensity
 from FemurSegmentation.filters import itk_otsu_threshold
 from FemurSegmentation.filters import region_of_interest
@@ -465,6 +467,79 @@ def final_refinement_and_filling(image):
     return refined
 
 
+def attention_refinement(in_path, out_path):
+    '''
+    Here there is only one function to test. This implementation allows a second
+    graph cut performed on a region obtained by dilating the mask obtained by
+    the firs graph cut.
+    This region act as an attention mechanism, focusing the refinement only on
+    the actual region of interest.
+    '''
+
+    reader = ImageReader(path=in_path, image_type=itk.Image[itk.SS, 3])
+    image = reader.read()
+
+    print('I am finding the hard constrains and the initial ROI', flush=True)
+
+    image, ROI, bkg, obj = pre_processing(image=image)
+
+    print('I am segmenting...', flush=True)
+    labeled = segment(image=image, obj=obj, bkg=bkg, ROI=ROI)
+    print('I am filling the holes', flush=True)
+    labeled = post_processing_and_hole_filling(labeled)
+
+    labeled = cast_image(labeled, itk.SS)
+
+    print('I am computing the new conditions', flush=True)
+
+    # attention region: is the dilation of the labeled region-> act as an
+    # attention mechanism
+    attention = execute_pipeline(dilate(labeled, radius=3))
+
+    # now compute the new object condition, that is the labeled image but after
+    #an erosion, that because we want to refine the image boarder
+    obj = execute_pipeline(erode(labeled, radius=4))
+
+    # some more compless condition are the one implemented
+    im, info = image2array(labeled)
+
+    bones = Boneness(image, [.75, 1.], attention)
+    boneness = bones.computeBonenessMeasure()
+
+    bkg = itk.GetArrayFromImage(boneness)
+    cond = (bkg < -0.5) & (im != 1)
+    bkg[cond] = 1
+    bkg[~cond] = 0
+    bkg = array2image(bkg, info)
+
+    # now compute the graph cut on the attention region
+
+    refined = segment(image=image, obj=obj, bkg=bkg, ROI=attention, scales=[.75, 1.], sigma=.25,
+                Lambda=1000, bone_ms_thr=1.1)
+
+    # now apply an opening to disconnect all the unwanted connected region
+    # select the largest connected region
+    # and a closing to fill all the remaining holes
+
+    refined = cast_image(refined, itk.SS)
+
+    opened = execute_pipeline(itk_binary_morphological_opening(refined, radius=2))
+    cc = execute_pipeline(connected_components(opened))
+    cc = relabel_components(cc)
+    final = binary_threshold(cc, upper_thr=2, lower_thr=0)
+
+    final = execute_pipeline(itk_binary_morphological_closing(final, radius=1))
+    final = cast_image(final, itk.UC)
+
+    final = adjust_physical_space(in_image=final,
+                                    ref_image=image,
+                                    ImageType=itk.Image[itk.UC, 3])
+
+
+    writer = VolumeWriter(path=out_path, image=final)
+    _ = writer.write()
+
+
 def main():
 
     # parse the arguments: Input image, Output Destination
@@ -496,5 +571,7 @@ def main():
     _ = writer.write()
 
 
+
 if __name__ == '__main__':
+
     main()

@@ -12,7 +12,7 @@ __email__ = ['riccardo.biondi7@unibo.it']
 # will help with the application slice by slice
 
 
-def erode(image, radius=1):
+def erode(image, radius=1, frg_val=1, bkg_val=0):
     '''
     '''
     ImageType = itk.Image[itk.SS, 3]
@@ -21,11 +21,30 @@ def erode(image, radius=1):
 
     ErodeFilterType = itk.BinaryErodeImageFilter[ImageType, ImageType, StructuringElementType]
     erodeFilter = ErodeFilterType.New()
-    erodeFilter.SetInput(image)
-    erodeFilter.SetKernel(structuringElement)
-    erodeFilter.SetErodeValue(1)
+    _ = erodeFilter.SetInput(image)
+    _ = erodeFilter.SetKernel(structuringElement)
+    _ = erodeFilter.SetForegroundValue(frg_val)
+    _ = erodeFilter.SetBackgroundValue(bkg_val)
 
     return erodeFilter
+
+
+def dilate(image, radius=1, frg_val=1, bkg_val=0):
+    '''
+    '''
+    ImageType = itk.Image[itk.SS, 3]
+    StructuringElementType = itk.FlatStructuringElement[3]
+    structuringElement = StructuringElementType.Ball(int(radius))
+
+    DilateFilterType = itk.BinaryDilateImageFilter[ImageType, ImageType, StructuringElementType]
+    dilateFilter = DilateFilterType.New()
+    _ = dilateFilter.SetInput(image)
+    _ = dilateFilter.SetKernel(structuringElement)
+    _ = dilateFilter.SetForegroundValue(frg_val)
+    _ = dilateFilter.SetBackgroundValue(bkg_val)
+
+    return dilateFilter
+
 
 def binary_threshold(image, upper_thr, lower_thr,
                     in_value=1, out_val=0, out_type=None) :
@@ -738,3 +757,22 @@ def itk_mask_image_filter(image, mask, out_value=0, masking_value=1):
     _ = masker.SetMaskImage(mask)
 
     return masker
+
+
+def itk_binary_morphological_opening(image, radius=1, frg=1, bkg=0):
+
+    # retrieve image information
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+    # define the structuring element
+    StructuringElementType = itk.FlatStructuringElement[Dimension]
+    structuringElement = StructuringElementType.Ball(int(radius))
+    # and now the closing filter
+    opening = itk.BinaryMorphologicalOpeningImageFilter[ImageType,
+                                                        ImageType,
+                                                        StructuringElementType].New()
+    _ = opening.SetForegroundValue(frg)
+    _ = opening.SetInput(image)
+    _ = opening.SetKernel(structuringElement)
+
+    return opening
