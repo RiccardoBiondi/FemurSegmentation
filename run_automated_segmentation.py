@@ -33,6 +33,9 @@ from FemurSegmentation.filters import itk_binary_morphological_opening
 from FemurSegmentation.filters import itk_invert_intensity
 from FemurSegmentation.filters import itk_otsu_threshold
 from FemurSegmentation.filters import region_of_interest
+from FemurSegmentation.filters import itk_sigmoid
+from FemurSegmentation.filters import itk_geodesic_active_contour
+from FemurSegmentation.filters import itk_signed_maurer_distance_map
 
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
@@ -48,7 +51,7 @@ except ModuleNotFoundError:
             'windows' : r"\lib\\",
             'ubuntu' : '/lib/',
             'win32' : r"/lib//"}
-    #in which OS I am??
+    #in which OS am I??
 
     here = os.path.abspath(os.path.dirname(__file__))
     var = ''.join([here, lib[sys.platform]])
@@ -529,7 +532,30 @@ def attention_refinement(in_path, out_path):
     final = binary_threshold(cc, upper_thr=2, lower_thr=0)
 
     final = execute_pipeline(itk_binary_morphological_closing(final, radius=1))
-    final = cast_image(final, itk.UC)
+
+    #
+    # Level Set Concave Region Refinement
+    #
+    dilated = execute_pipeline(dilate(final, radius=4))
+    sdf = execute_pipeline(itk_signed_maurer_distance_map(dilated, inside_positive=True))
+    bones = Boneness(image, [.5, .75], ROI)
+    boneness  = bones.computeBonenessMeasure()
+    bones = cast_image(boneness, itk.F)
+
+    sigmoid = execute_pipeline(itk_sigmoid(bones, 10., -1.))
+
+    levels = execute_pipeline(itk_geodesic_active_contour(input_image=sdf,
+                                                          feature_image=sigmoid,
+                                                          propagation_scaling=5.))
+
+    result = binary_threshold(levels, upper_thr=100, lower_thr=1.5)
+
+
+    # now compute the boneness map as feature map for the level set
+
+    #first of all define the input image-> it is computetd as the sdf of the
+    # dileted refined output
+    final = cast_image(result, itk.UC)
 
     final = adjust_physical_space(in_image=final,
                                     ref_image=image,
@@ -552,6 +578,7 @@ def main():
     image, ROI, bkg, obj = pre_processing(image=image)
     labeled = segment(image=image, obj=obj, bkg=bkg, ROI=ROI)
     labeled = post_processing_and_hole_filling(labeled)
+
 
     # now the second graph cut
     #labeled = segment(image=image, obj=labeled, bkg=bkg, ROI=ROI, scales=[.75],

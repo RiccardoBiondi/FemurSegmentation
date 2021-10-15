@@ -776,3 +776,55 @@ def itk_binary_morphological_opening(image, radius=1, frg=1, bkg=0):
     _ = opening.SetKernel(structuringElement)
 
     return opening
+
+
+def itk_sigmoid(image, alpha=10., beta=-1, output_min=0.0, output_max=1.):
+    '''
+    '''
+    SigmoidFilterType = itk.SigmoidImageFilter[itk.Image[itk.F, 3], itk.Image[itk.F, 3]].New()
+    sigmoid = SigmoidFilterType.New()
+
+    _ = sigmoid.SetOutputMinimum(output_min)
+    _ = sigmoid.SetOutputMaximum(output_max)
+    _ = sigmoid.SetAlpha(alpha)
+    _ = sigmoid.SetBeta(beta)
+    _ = sigmoid.SetInput(image)
+
+    return sigmoid
+
+
+def itk_geodesic_active_contour(input_image, feature_image, propagation_scaling=1.,
+                            curvature_scaling=1., advection_scaling=1.0,
+                            max_RMS_error=0.02, number_of_iterations=1):
+    '''
+    '''
+    ImageType = itk.Image[itk.F, 3]
+    geodesic_ac = itk.GeodesicActiveContourLevelSetImageFilter[ImageType,
+                                                               ImageType,
+                                                               itk.F].New()
+    _ = geodesic_ac.SetPropagationScaling(propagation_scaling)
+    _ = geodesic_ac.SetCurvatureScaling(curvature_scaling)
+    _ = geodesic_ac.SetAdvectionScaling(advection_scaling)
+    _ = geodesic_ac.SetMaximumRMSError(max_RMS_error)
+    _ = geodesic_ac.SetNumberOfIterations(number_of_iterations)
+    _ = geodesic_ac.SetInput(input_image)
+    _ = geodesic_ac.SetFeatureImage(feature_image)
+
+    return geodesic_ac
+
+
+
+def itk_signed_maurer_distance_map(image, inside_positive=False,
+                                   squared_distance=False):
+    '''
+    '''
+    ImageType = itk.Image[itk.SS, 3]
+    OutputType = itk.Image[itk.F, 3]
+    dist = itk.SignedMaurerDistanceMapImageFilter[ImageType, OutputType].New()
+    _ = dist.SetInput(image)
+    _ = dist.SetInsideIsPositive(inside_positive)
+    _ = dist.SetSquaredDistance(squared_distance)
+#    _ = dist.Update()
+
+
+    return dist
