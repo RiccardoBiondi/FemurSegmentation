@@ -19,14 +19,25 @@ from FemurSegmentation.IOManager import VolumeWriter
 from FemurSegmentation.boneness import Boneness
 from FemurSegmentation.links import GraphCutLinks
 
-
 try:
     from GraphCutSupport import RunGraphCut
-except:
-    here = os.path.abspath(os.path.dirname(__file__))  # where this file is
-    var = ''.join([here, r"\lib\\"])
+
+except ModuleNotFoundError:
+
+    lib = {'Linux' : '/lib/',
+            'Windows' : r"\lib\\",
+            'linux' : '/lib/',
+            'windows' : r"\lib\\",
+            'ubuntu' : '/lib/',
+            'win32' : r"/lib//"}
+    #in which OS am I??
+
+    here = os.path.abspath(os.path.dirname(__file__))
+    var = ''.join([here, lib[sys.platform]])
     sys.path.append(var)
     from GraphCutSupport import RunGraphCut
+
+
 
 __author__ = ['Riccardo Biondi']
 __email__ = ['riccardo.biondi7@unibo.it']
