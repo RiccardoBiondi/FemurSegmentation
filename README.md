@@ -134,6 +134,69 @@ Now you are ready to perform the segmentation:
 python run_semiautomated_segmentation.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd' --init='/path/to/init/hard/constrains'
 ```
 
+#### Smoothing
+
+Optionally it is possible to apply 3 different smoothing after the segmentation. These smoothing are:
+
+- *gaussian*
+- *open_close*
+- *shrink_grow*
+
+To specify the ind of smoothing run:
+
+```console
+python run_semiautomated_segmentation.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd' --init='/path/to/init/hard/constrains' --smoothing='gaussian'
+```
+
+the command *--smooth_size* allows to specify the kernel size of the smoothing operations 
+
+
+## Snakemake
+
+If you have not installed snakemake, you can find the instruction here.
+The snalemake pipeline allows you to split a lower limb CT scan into right and left legs and perform an automated femur segmentation in a multi-subject segmentation framework. All the subjects must be organized as follows
+
+base_dir |
+            |
+            patient1|
+                     |
+                     patient1_[TAG]
+            |
+            patient2|
+                    |
+                    patient2_[TAG]
+
+where patient1 (or patient 2) is the patient ID. patient_[TAG] is a folder containing the DICOM. As default [TAG] is "CTData", if you want to use a different tag, edit the TAG attibute in the config.yml of change it from command line.
+
+Now you can execute the pipeline by typing from command line:
+
+```bash
+snakemake --cores 1 --config base_dir='/path/to/base_dir'
+```
+
+The result will be the following:
+
+base_dir |
+            |
+            patient1|
+                     |
+                     patient1_[TAG]
+                     patient1_R.nrrd
+                     patient1_L.nrrd
+                     patient1_seg_R.nrrd
+                     patient1_seg_L.nrrd
+
+            |
+            patient2|
+                    |
+                    patient2_[TAG]
+                    patient2_R.nrrd
+                    patient2_L.nrrd
+                    patient2_seg_R.nrrd
+                    patient2_seg_L.nrrd
+
+
+where the files *_R* and *_L* are the images corresponding to the right and left leg, and the *_seg_R*, *_seg_L* the one corresponding to the right and left segmentation
 ## Contribute
 
 Any contribution is more than welcome. Just fill an [issue](./.github/ISSUE_TEMPLATE.md) or a [pull request](./.github/PULL_REQUEST_TEMPLATE.md) and we will check ASAP!

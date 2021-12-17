@@ -704,8 +704,9 @@ def itk_otsu_threshold(image, nbins=128, mask_image=None, mask_value=1):
 
     PixelType, Dimension = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dimension]
+    MaskType = itk.Image[itk.UC, 3]
 
-    otsu = itk.OtsuThresholdImageFilter[ImageType, ImageType].New()
+    otsu = itk.OtsuThresholdImageFilter[ImageType, ImageType, MaskType].New()
     _ = otsu.SetInput(image)
     _ = otsu.SetMaskImage(mask_image)
     _ = otsu.SetMaskValue(mask_value)
@@ -781,7 +782,10 @@ def itk_binary_morphological_opening(image, radius=1, frg=1, bkg=0):
 def itk_sigmoid(image, alpha=10., beta=-1, output_min=0.0, output_max=1.):
     '''
     '''
-    SigmoidFilterType = itk.SigmoidImageFilter[itk.Image[itk.F, 3], itk.Image[itk.F, 3]].New()
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    SigmoidFilterType = itk.SigmoidImageFilter[ImageType, ImageType].New()
     sigmoid = SigmoidFilterType.New()
 
     _ = sigmoid.SetOutputMinimum(output_min)
@@ -798,7 +802,8 @@ def itk_geodesic_active_contour(input_image, feature_image, propagation_scaling=
                             max_RMS_error=0.02, number_of_iterations=1):
     '''
     '''
-    ImageType = itk.Image[itk.F, 3]
+    PixelType, Dimension = itk.template(input_image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
     geodesic_ac = itk.GeodesicActiveContourLevelSetImageFilter[ImageType,
                                                                ImageType,
                                                                itk.F].New()
@@ -818,8 +823,9 @@ def itk_signed_maurer_distance_map(image, inside_positive=False,
                                    squared_distance=False):
     '''
     '''
-    ImageType = itk.Image[itk.SS, 3]
-    OutputType = itk.Image[itk.F, 3]
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+    OutputType = itk.Image[itk.F, Dimension]
     dist = itk.SignedMaurerDistanceMapImageFilter[ImageType, OutputType].New()
     _ = dist.SetInput(image)
     _ = dist.SetInsideIsPositive(inside_positive)
@@ -828,3 +834,16 @@ def itk_signed_maurer_distance_map(image, inside_positive=False,
 
 
     return dist
+
+
+def itk_discrete_gaussian(image, kernel_width=1, variance=.1):
+
+    PixelType, Dimension = itk.template(image)[1]
+    ImageType = itk.Image[PixelType, Dimension]
+
+    gauss = itk.DiscreteGaussianImageFilter[ImageType, ImageType].New()
+    _ = gauss.SetInput(image)
+    _ = gauss.SetVariance(variance)
+    _ = gauss.SetMaximumKernelWidth(kernel_width)
+
+    return gauss

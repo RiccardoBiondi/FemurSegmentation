@@ -8,12 +8,24 @@ import argparse
 import numpy as np
 
 from FemurSegmentation.utils import image2array, array2image, cast_image
+
+from FemurSegmentation.filters import add
+from FemurSegmentation.filters import erode
+from FemurSegmentation.filters import dilate
 from FemurSegmentation.filters import binary_threshold
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import relabel_components
 from FemurSegmentation.filters import execute_pipeline
 from FemurSegmentation.filters import binary_curvature_flow
 from FemurSegmentation.filters import iterative_hole_filling
+from FemurSegmentation.filters import apply_pipeline_slice_by_slice
+from FemurSegmentation.filters import itk_invert_intensity
+from FemurSegmentation.filters import itk_discrete_gaussian
+from FemurSegmentation.filters import itk_binary_morphological_closing
+from FemurSegmentation.filters import itk_binary_morphological_opening
+
+
+
 from FemurSegmentation.IOManager import ImageReader
 from FemurSegmentation.IOManager import VolumeWriter
 from FemurSegmentation.boneness import Boneness
@@ -65,6 +77,20 @@ def parse_args():
                         type=str,
                         action='store',
                         help='Manual Init of per-pixel term')
+    parser.add_argument('--smoothing',
+                        dest='smoothing',
+                        required=False,
+                        type=str,
+                        action='store',
+                        default=None,
+                        help='Specify the kind of smoothing to apply to the final result. if not specified no smoothing will applied. Available: "gaussian", "open_close", "shrink_grow"')
+    parser.add_argument('--smooth_size',
+                        dest='smooth_size',
+                        required=False,
+                        action='store',
+                        type=int,
+                        default=1,
+                        help='Kernel size for the smoothing technique')
 
     args = parser.parse_args()
     return args
@@ -144,22 +170,74 @@ def post_processing(labeled):
                                majority_threshold=1, bkg_val=0, fgr_val=1)
 
     return execute_pipeline(lab)
+def image_smoothing(image, kind='', kernel=1):
+
+    if kind == 'gaussian':
+
+        print('Applying gaussian smoothing with a kernel size of: {}'.format(kernel), flush=True)
+        g = execute_pipeline(itk_discrete_gaussian(image, kernel))
+
+        return g
+
+    elif kind == 'open_close':
+        print('Applying open_close smoothing with a kernel size of: {}'.format(kernel), flush=True)
+
+        op = execute_pipeline(itk_binary_morphological_opening(image, radius=kernel))
+        cl = execute_pipeline(itk_binary_morphological_closing(op, radius=kernel))
+
+        return cl
+
+    elif kind == 'shrink_grow':
+
+        print('Applying shrink_grow smoothing with a kernel size of: {}'.format(kernel), flush=True)
+        er = execute_pipeline(erode(image, radius=kernel))
+        di = execute_pipeline(dilate(er, radius=kernel))
+
+        return di
+
+    else:
+        return image
 
 
 def main():
 
     args = parse_args()
 
+    print('Starting', flush=True)
+
+    print('Reading the input image from:{}'.format(args.input), flush=True)
+    print('Reading the initial labeling from: {}'.format(args.init), flush=True)
+
     reader = ImageReader()
     image = reader(path=args.input, image_type=itk.Image[itk.F, 3])
     init = reader(path=args.init, image_type=itk.Image[itk.SS, 3])
 
+    print('Preparing the initial conditions', flush=True)
+
     ROI, obj, bkg, info = prepare_exclusion_region(image, init)
+
+    print('Running Graph Cut Segmentation', flush=True)
     labeled = segment(image=image, ROI=ROI, obj=obj, bkg=bkg, info=info)
+    print('Refining the Results', flush=True)
     labeled = post_processing(labeled=labeled)
 
+
+    if args.smoothing is not None:
+        if args.smoothing.lower() in ['gaussian', 'open_close', "shrink_grow"]:
+            labeled = image_smoothing(labeled, args.smoothing.lower(), args.smooth_size)
+        else:
+            print('{} is not recognozed as availble smoothing type, no smoothing will be applied'.format(args.smoothing), flush=True)
+
+
+    print('Writing the results to: {}'.format(args.output), flush=True)
     writer = VolumeWriter(path=args.output, image=labeled)
     _ = writer.write()
+
+
+
+
+
+    print('[DONE]', flush=True)
 
 
 if __name__ == '__main__':
