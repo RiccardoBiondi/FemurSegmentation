@@ -27,7 +27,7 @@ class GraphCutLinks :
         self.roi, _ = image2array(roi)
         self.bkg, _ = image2array(bkg)
         self.obj, _ = image2array(obj)
-        self.total_vx = int(np.sum(self.roi))
+        self.total_vx = self.roi[self.roi == 1].size#int(np.sum(self.roi[self.roi == 1]))
         self.vx_id = np.full(self.image.shape, -1)
         self.vx_id[self.roi != 0] = range(self.total_vx)
 
