@@ -130,6 +130,7 @@ def get_optimal_conditions(image, padding_thr=-1500):
     #find the optimal number of threshold
     cond = (noPad_array > -500) & (noPad_array < 500)
     nob = get_optimal_number_of_bins(noPad_array[cond])
+    soft_tissue_mask = cast_image(soft_tissue_mask, itk.SS)
     otsu = itk_otsu_threshold(image=image, nbins=nob, mask_image=soft_tissue_mask)
     _ = otsu.Update()
     bkg_upper_thr = otsu.GetThreshold()

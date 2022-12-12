@@ -704,9 +704,9 @@ def itk_otsu_threshold(image, nbins=128, mask_image=None, mask_value=1):
 
     PixelType, Dimension = itk.template(image)[1]
     ImageType = itk.Image[PixelType, Dimension]
-    MaskType = itk.Image[itk.UC, 3]
+    #MaskType = itk.Image[itk.SS, 3]
 
-    otsu = itk.OtsuThresholdImageFilter[ImageType, ImageType, MaskType].New()
+    otsu = itk.OtsuThresholdImageFilter[ImageType, ImageType].New()
     _ = otsu.SetInput(image)
     _ = otsu.SetMaskImage(mask_image)
     _ = otsu.SetMaskValue(mask_value)
