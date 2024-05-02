@@ -133,15 +133,15 @@ def dilate_2d(img, radius):
     return(dilated_img)
 
 def applyBinaryThresholdFilter(image, upper_thresh, lower_thresh=1, dim=3):
-        
+
     ImageType = itk.Image[itk.SS, dim]
     threshold_filter = itk.BinaryThresholdImageFilter[ImageType, ImageType].New()
     threshold_filter.SetLowerThreshold(lower_thresh)
-    
+
     threshold_filter.SetUpperThreshold(upper_thresh)
     threshold_filter.SetInput(image)
     _ = threshold_filter.Update()
-    
+
     return threshold_filter.GetOutput()
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ def filter_components(components_arr):
 
     start_slice = int(components_arr.shape[0]//2)
     femur_z = components_arr[start_slice,:,:,0]
-    
+
     femur_arr = np.zeros_like(components_arr[:,:,:,0])
     femur_arr[start_slice, :,:] = femur_z
 
@@ -258,7 +258,7 @@ def slice_shape_descriptors(components_img):
     shape_filter.SetInput(components_img)
     _ = shape_filter.Update()
     stats = shape_filter.GetOutput()
-    
+
     return stats
 
 def threshold_array(arr, thr):
@@ -285,7 +285,7 @@ def knee_score_slice(x_img):
             comp_2_UC = cast_img(component_2, itk.SS, itk.UC, 2)
             shape_1_descriptors = slice_shape_descriptors(comp_1_UC)
             shape_2_descriptors = slice_shape_descriptors(comp_2_UC)
-            
+
             label_1 = shape_1_descriptors.GetLabels()[0]
             area_1 = shape_1_descriptors.GetLabelObject(label_1).GetPhysicalSize()
             bounding_box_width_1 = shape_1_descriptors.GetLabelObject(label_1).GetBoundingBox().GetSize()[0]
@@ -332,7 +332,7 @@ def smooth_and_threshold(boneness, ROI_img, smooth, threshold):
             smooth_rad: int
             thr: between 0 and 1
     """
-    
+
     ROI_arr, _ = image2array(ROI_img)
 
     # Smooth boneness
@@ -374,7 +374,7 @@ def get_planar_components_2d(img_SS):
     return(comp_1_arr, comp_2_arr, comp_3_arr)
 
 def order_components_by_j_position(comp_1_arr, comp_2_arr, comp_3_arr):
-        
+
     j_1 = np.sum(range(comp_1_arr.shape[1])*np.sum(comp_1_arr, axis=0))/np.sum(comp_1_arr)
     j_2 = np.sum(range(comp_2_arr.shape[1])*np.sum(comp_2_arr, axis=0))/np.sum(comp_2_arr)
     j_3 = np.sum(range(comp_3_arr.shape[1])*np.sum(comp_3_arr, axis=0))/np.sum(comp_3_arr)
@@ -382,7 +382,7 @@ def order_components_by_j_position(comp_1_arr, comp_2_arr, comp_3_arr):
     left_component_idx = np.argmin([j_1,j_2,j_3])
     right_component_idx = np.argmax([j_1,j_2,j_3])
     middle_component_idx = set([0,1,2]).difference(set([left_component_idx,right_component_idx])).pop()
-    
+
     left_component = [comp_1_arr, comp_2_arr, comp_3_arr][left_component_idx]
     right_component = [comp_1_arr, comp_2_arr, comp_3_arr][right_component_idx]
     middle_component = [comp_1_arr, comp_2_arr, comp_3_arr][middle_component_idx]
@@ -392,7 +392,7 @@ def order_components_by_j_position(comp_1_arr, comp_2_arr, comp_3_arr):
 def label_head_slice(segmentation_SS, body_side):
 
     segm_comp_1_arr, segm_comp_2_arr, segm_comp_3_arr = get_planar_components_2d(segmentation_SS)
-    
+
     area_1 = np.sum(segm_comp_1_arr)
     area_2 = np.sum(segm_comp_2_arr)
     area_3 = np.sum(segm_comp_3_arr)
@@ -456,11 +456,11 @@ def segment(image, ROI, obj, bkg, info):
     '''
     '''
     # Returns an itk image obj
-    
+
     bn = Boneness(image=image, scales=[.5, .75], roi=ROI)
-    
+
     ms_bones = bn.computeBonenessMeasure()
-    
+
     gc_links = GraphCutLinks(image=image,
                             boneness=ms_bones,
                             roi=ROI,
@@ -516,7 +516,7 @@ def directionalConnectedComponentFilter(image):
             ON the sagittal plane cannot be present more than 4 connected components in the same slice
         And such components are the largest on their slice.
     """
-    
+
     # Computing directional connected components
     axial_image = getSortedPlanaryCC(image, 2)
     coronal_image = getSortedPlanaryCC(image, 1)
@@ -568,17 +568,17 @@ def directionalFillHoles(image, dimension):
 
         Fill holes in 2D, slice by slice, along the given direction
     """
-    
+
     ImageType = itk.Image[itk.SS, 2]
     fillHoles_filter = itk.BinaryFillholeImageFilter[ImageType].New()
-    
+
     filter_ = itk.SliceBySliceImageFilter[itk.Image[itk.SS, 3], itk.Image[itk.SS, 3]].New()
     _ = filter_.SetInput(image)
     _ = filter_.SetFilter(fillHoles_filter)
     _ = filter_.SetDimension(dimension)
     _ = filter_.Update()
     image = filter_.GetOutput()
-    
+
     return image
 
 def erode_img(img, radius, dim=3):
@@ -645,7 +645,7 @@ def score_boolean_array(boolean_arr):
     accumulator = 0
     there_is_accumulator = False
     len_array = len(boolean_arr)
-    
+
     score = np.array([0]*len(boolean_arr))
     for i in range(len_array):
 
