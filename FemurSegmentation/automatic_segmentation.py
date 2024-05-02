@@ -68,7 +68,7 @@ def extract_slice(img, z):
     """
         Util for extracting z-th slice out of a 3D volume (argument 'img'), with respect to the axial direction
     """
-    
+
     arr_3d, _ = image2array(img)
     arr_2d = arr_3d[z,:,:]
     info_2d = dummy_info_2d(arr_2d)
