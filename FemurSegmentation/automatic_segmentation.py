@@ -16,7 +16,6 @@ from FemurSegmentation.filters import applyMultiplicationFilter
 
 from FemurSegmentation.filters import connected_components
 from FemurSegmentation.filters import relabel_components
-from FemurSegmentation.filters import execute_pipeline
 from FemurSegmentation.filters import binary_curvature_flow
 from FemurSegmentation.filters import iterative_hole_filling
 
@@ -38,7 +37,7 @@ def patient_code(i):
     return("Pat"+str_i)
 
 def load_img(file_name, path_to_splitted_images):
-    
+
     load_path = path_to_splitted_images+file_name+'/'+file_name+".nrrd"
     reader = ImageReader()
     img = reader(path=load_path, image_type=itk.Image[itk.F, 3])
@@ -166,7 +165,7 @@ def get_components_2d(img):
 def filter_components(components_arr):
 
     start_slice = int(components_arr.shape[0]//2)
-    femur_z = components_arr[start_slice,:,:,0]    
+    femur_z = components_arr[start_slice,:,:,0]
     
     femur_arr = np.zeros_like(components_arr[:,:,:,0])
     femur_arr[start_slice, :,:] = femur_z
@@ -241,7 +240,7 @@ def get_center_head(profile):
     else:
         # Two peaks -> We take the one with smaller z
         first_peak = idx + np.min([peak_1, peak_2])
-        second_peak = idx + np.max([peak_1, peak_2])        
+        second_peak = idx + np.max([peak_1, peak_2])
         center_head = first_peak
         valley = first_peak + np.argmin(profile[first_peak:second_peak])
 
