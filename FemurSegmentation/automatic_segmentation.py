@@ -529,7 +529,7 @@ def directionalConnectedComponentFilter(image):
 
     # Merging directional images
     final_image = applyMultiplicationFilter( applyMultiplicationFilter(axial_image, coronal_image), sagittal_image )
- 
+
     return final_image
 
 #---------------------------------------------------------------------------------------------------------------------
