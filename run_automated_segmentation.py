@@ -107,7 +107,7 @@ def firstGC(filename, input_path, output_path):
         valley = center_head + np.argmin(average_profile[center_head:])
 
     # The top of the femur is set to 20 slices above the identified "center head" position
-    top_head = np.min([average_profile.shape[0]-1, center_head+20])
+    #top_head = np.min([average_profile.shape[0]-1, center_head+20])
 
     #-----------------------------------------------------------------------------------------------------
 
@@ -123,7 +123,6 @@ def firstGC(filename, input_path, output_path):
 
     # Create approximated segmentation
     segmentation = data_arr*high_boneness_arr
-    segmentation_not_eroded = np.zeros_like(segmentation)
     erosion_radius = 1
     thr = 0.1
     for z in range(segmentation.shape[0]):
@@ -347,7 +346,7 @@ def firstGC(filename, input_path, output_path):
     condition_img = array2image(bkg+obj, info_3d)
 
     #writer = VolumeWriter(path=output_path+'/'+filename+".nrrd", image=condition_img)
-    #_ = writer.write()
+    #writer.write()
  
     #-----------------------------------------------------------------------------------------------------
 
@@ -406,7 +405,7 @@ def firstGC(filename, input_path, output_path):
     results_img = array2image(results_arr, info_3d)
 
     writer = VolumeWriter(path=output_path+'/'+filename+"_firstGC_output.nrrd", image=results_img)
-    _ = writer.write()
+    writer.write()
 
     #-----------------------------------------------------------------------------------------------------
 
@@ -429,7 +428,7 @@ def firstGC(filename, input_path, output_path):
     condition_img = array2image(bkg+obj, info_3d)
 
     writer = VolumeWriter(path=output_path+'/'+filename+"_init.nrrd", image=condition_img)
-    _ = writer.write()
+    writer.write()
 
     print("    First Graph Cut: done\n", flush=True)
 
@@ -444,7 +443,7 @@ def secondGC(filename, input_path, output_path):
     # Erode graphcut output
     eroded_img = erode_img(graphcut_output_img, 3)
     eroded_arr, _ = image2array(eroded_img)
-    eroded_profile = np.sum(np.sum(eroded_arr, axis=1), axis=1)
+    #eroded_profile = np.sum(np.sum(eroded_arr, axis=1), axis=1)
 
     # Find largest connected component
     ImageType = itk.Image[itk.SS, 3]
@@ -468,7 +467,7 @@ def secondGC(filename, input_path, output_path):
 
     #------------------------------------------------------------------------------------
 
-    graphcut_output_arr, info3d = image2array(graphcut_output_img)
+    graphcut_output_arr, _ = image2array(graphcut_output_img)
     graphcut_profile = np.sum(np.sum(graphcut_output_arr, axis=1), axis=1)
 
     half_idx = graphcut_profile.shape[0]//2
@@ -601,19 +600,19 @@ def secondGC(filename, input_path, output_path):
     bkg = np.where(bkg_arr>0, 2.0, 0.0)
     obj = np.where(connComp_arr>0, 1.0, 0.0)
     condition = bkg+obj
-    condition_img = array2image(bkg+obj, info_3d)
+    condition_img = array2image(condition, info_3d)
 
     #------------------------------------------------------------------------------------
 
     #writer = VolumeWriter(path=output_path+'/'+filename+"_second_init.nrrd", image=condition_img)
-    #_ = writer.write()
+    #writer.write()
 
     #------------------------------------------------------------------------------------
 
     print("        Running graph-cut...", flush=True)
 
     # GRAPH-CUT
-    ROI, obj, bkg, info = prepare_exclusion_region(raw_img, condition_img)
+    ROI, obj, bkg, _ = prepare_exclusion_region(raw_img, condition_img)
     labeled = segment(image=raw_img, ROI=ROI, obj=obj, bkg=bkg, info=info_3d)
     labeled_postproc = post_processing(labeled=labeled)
 
@@ -627,7 +626,7 @@ def secondGC(filename, input_path, output_path):
     results_img = array2image(results_arr, info_3d)
 
     writer = VolumeWriter(path=output_path+'/'+filename+".nrrd", image=results_img)
-    _ = writer.write()
+    writer.write()
 
     print("Done\n", flush=True)
 
@@ -661,7 +660,7 @@ def main():
             firstGC(filename, input_dir_path, output_dir_path)
             secondGC(filename, input_dir_path, output_dir_path)
             cleanup(filename, output_dir_path)
-        except:
+        except Exception:
             print("Failure, the processing of file "+filename+" will be delayed", flush=True)
             failed_files.append(filename)
         print("", flush=True)
@@ -677,7 +676,7 @@ def main():
                 firstGC(filename, input_dir_path, output_dir_path)
                 secondGC(filename, input_dir_path, output_dir_path)
                 cleanup(filename, output_dir_path)
-            except:
+            except Exception:
                 print("\nFailure, the file "+filename+" cannot be processed. Contact help at federico.magnani9@unibo.it\n", flush=True)
                 very_failed_files.append(filename)
 
