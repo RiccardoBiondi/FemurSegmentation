@@ -16,7 +16,7 @@ def get_persistence(profile):
 
     # We have a step counter for updating the level, a different step counter for updating the groups
     # So, a counter for changing level, a counter for changing point.
-    # Probably it's a lot complicated this reasoning, I'm sure there are better ways of doing it 
+    # Probably it's a lot complicated this reasoning, I'm sure there are better ways of doing it
     t_lvl = 0
     t_grp = 0
     old_v = np.max(profile)
@@ -47,7 +47,7 @@ def get_persistence(profile):
                 is_alive[i] = 0
             elif (left_group!=default_value)&(right_group==default_value):
                 groups[t_grp, i] = left_group
-                is_alive[i] = 0    
+                is_alive[i] = 0
             else:
                 left_pers = np.max(persistence[groups[t_grp,:]==left_group])
                 right_pers = np.max(persistence[groups[t_grp,:]==right_group])
