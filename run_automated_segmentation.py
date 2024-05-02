@@ -450,7 +450,7 @@ def firstGC(filename, input_path, output_path):
     #-----------------------------------------------------------------------------------------------------
 
     # SAVE INITS FOR SECOND GRAPHCUTS
-    
+
     condition = bkg+obj
     condition_img = array2image(bkg+obj, info_3d)
 
