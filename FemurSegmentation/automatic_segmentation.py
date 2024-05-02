@@ -44,7 +44,7 @@ def load_img(file_name, path_to_splitted_images):
     return(img)
 
 def cast_img(img, in_type, out_type, dim=3):
-    
+
     castImageFilter = itk.CastImageFilter[itk.Image[in_type, dim], itk.Image[out_type, dim]].New()
     castImageFilter.SetInput(img)
     castImageFilter.Update()
@@ -644,9 +644,10 @@ def get_largest_conn_comp(img):
 def score_boolean_array(boolean_arr):
     accumulator = 0
     there_is_accumulator = False
-
+    len_array = len(boolean_arr)
+    
     score = np.array([0]*len(boolean_arr))
-    for i in range(len(boolean_arr)):
+    for i in range(len_array):
 
         if boolean_arr[i]:
             if not there_is_accumulator:
