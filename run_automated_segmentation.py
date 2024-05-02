@@ -23,12 +23,12 @@ def parse_args():
 
     parser.add_argument(
         '--input',
-        dest='input', required=True, type=str, action='store', 
+        dest='input', required=True, type=str, action='store',
         help='Input directory - All files inside this directory will be processed'
     )
     parser.add_argument(
         '--output',
-        dest='output', required=True, type=str, action='store', 
+        dest='output', required=True, type=str, action='store',
         help='Output directory - Outputs will be saved here'
     )
     parser.add_argument(
@@ -92,7 +92,7 @@ def firstGC(filename, input_path, output_path):
     half_slice = len(components_profile)//2
     center_knee = get_center_knee(components_profile)
 
-    # Get the average of the components made with threshold 
+    # Get the average of the components made with threshold
     averaged = np.zeros_like(filtered_components_arr)
     for z in range(averaged.shape[0])[half_slice:]:
         averaged[z,:,:] = (filtered_components_arr[z-3,:,:]+filtered_components_arr[z-2,:,:]+filtered_components_arr[z-1,:,:]+filtered_components_arr[z,:,:])/4
@@ -163,7 +163,7 @@ def firstGC(filename, input_path, output_path):
         segmentation_img = array2image(segmentation[start_search+slice_offset,:,:], dummy_info)
         segmentation_SS = cast_img(segmentation_img, itk.D, itk.SS, dim=2)
         suitable_slice, obj_head, bkg_head = label_head_slice(segmentation_SS, body_side)
-        
+
         # Always update, later the wrong ones will be removed
         bkg_head = np.where(bkg_head>0, 1.0, 0.0)
         obj_head = np.where(obj_head>0, 1.0, 0.0)
@@ -182,7 +182,7 @@ def firstGC(filename, input_path, output_path):
         raise ValueError("No slice could be found for segmenting femur head!")
         #with open("/home/PERSONALE/federico.magnani9/femurSegmentation/test_7/log.txt", "a") as myfile:
         #    message = "[Subject "+str(subj)+"] No slice could be found for segmenting femur head: skipping subject."
-        #    myfile.write(message)        
+        #    myfile.write(message)
         #continue
 
     obj[start_search+slice_offset+score[slice_offset]:] = 0
@@ -285,9 +285,10 @@ def firstGC(filename, input_path, output_path):
     # Get the top-end of femur head from init profile
     init_profile = np.sum(np.sum(obj+bkg, axis=1), axis=1)
     der_head = init_profile[current_segmentation_end+1:] - init_profile[current_segmentation_end:-1]
-    if len(der_head)>2:
+    len_der_head = len(der_head)
+    if len_der_head>2:
         # Smooth the derivative
-        for i in range(len(der_head)):
+        for i in range(len_der_head):
             if i==0:
                 der_head[i] = (der_head[i]+der_head[i+1]+der_head[i+2])/3
             elif i==(len(der_head)-1):
@@ -310,14 +311,14 @@ def firstGC(filename, input_path, output_path):
 
     #-----------------------------------------------------------------------------------------------------
 
-    # Between cut_slice and cut_slice+10 (if possible) we let graphcut do the job    
+    # Between cut_slice and cut_slice+10 (if possible) we let graphcut do the job
     # Turn obj into bkg
     roof_slice = np.min([segmentation.shape[0]-1, cut_slice+10])
     bkg[roof_slice:, :,:] += obj[roof_slice:, :,:]
     # Delete object up to the cut
     obj[cut_slice:, :,:] = 0
     # Add roof
-    bkg[roof_slice,:,:] = 1     
+    bkg[roof_slice,:,:] = 1
 
     #-----------------------------------------------------------------------------------------------------
 
@@ -418,7 +419,7 @@ def firstGC(filename, input_path, output_path):
     # Delete object up to the cut
     obj[:cut_knee, :,:] = 0.0
     # Add bottom
-    bkg[bottom_slice,:,:] = 2.0     
+    bkg[bottom_slice,:,:] = 2.0
 
     #-----------------------------------------------------------------------------------------------------
 
@@ -487,11 +488,12 @@ def secondGC(filename, input_path, output_path):
     area_roi = np.sum(np.sum(eroded_arr, axis=1), axis=1)
 
     mean_profile = np.zeros_like(segmented_raw_profile)
-    for z in range(len(mean_profile)):
+    len_mean_profile = len(mean_profile)
+    for z in range(len_mean_profile):
         if area_roi[z] != 0:
             mean_profile[z] = segmented_raw_profile[z]/area_roi[z]
-        else: 
-            mean_profile[z] = 0    
+        else:
+            mean_profile[z] = 0
 
     #------------------------------------------------------------------------------------
 
@@ -672,7 +674,7 @@ def main():
         very_failed_files = []
         for filename in failed_files:
             print("Processing the file: "+filename, flush=True)
-            try: 
+            try:
                 firstGC(filename, input_dir_path, output_dir_path)
                 secondGC(filename, input_dir_path, output_dir_path)
                 cleanup(filename, output_dir_path)
