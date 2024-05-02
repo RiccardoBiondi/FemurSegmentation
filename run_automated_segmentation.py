@@ -45,20 +45,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def firstGC(filename, input_path, output_path):
-    print("    First Graph Cut", flush=True)
-    print("        Manual initialization...", flush=True)
-
-    # LOAD DATA
-    load_path = input_path+'/'+filename+".nrrd"
-    reader = ImageReader()
-    raw_img = reader(path=load_path, image_type=itk.Image[itk.F, 3])
-
-    raw_arr, info_3d = image2array(raw_img)
-
-    # GET ROI
-    ROI_arr, body_side = get_ROI(raw_img)
-    data_arr = raw_arr*ROI_arr
+def slice_identification(data_arr, info_3d):
 
     # THRESHOLD
     thr = 0.05
@@ -85,8 +72,6 @@ def firstGC(filename, input_path, output_path):
     filtered_components_arr = filter_components(components_arr)
     components_profile = np.sum(np.sum(filtered_components_arr, axis=1), axis=1)
 
-    print("        Slice identification...", flush=True)
-
     # SLICE IDENTIFICATION
     # Get the knee slice
     half_slice = len(components_profile)//2
@@ -109,17 +94,11 @@ def firstGC(filename, input_path, output_path):
     # The top of the femur is set to 20 slices above the identified "center head" position
     #top_head = np.min([average_profile.shape[0]-1, center_head+20])
 
-    #-----------------------------------------------------------------------------------------------------
+    obj_half_slice = filtered_components_arr[half_slice,:,:]
 
-    # Head
-    high_boneness_img, _ = boneness_thresholds(raw_img, smooth=10, threshold=0)
-    high_boneness_arr, _ = image2array(high_boneness_img)
+    return(half_slice, center_knee, center_head, valley, obj_half_slice)
 
-    #-----------------------------------------------------------------------------------------------------
-
-    # SEGMENTATION
-    # Knee
-    obj_knee, bkg_knee = knee_segmentation_pipe(data_arr, center_knee)
+def create_segmentation(data_arr, high_boneness_arr):
 
     # Create approximated segmentation
     segmentation = data_arr*high_boneness_arr
@@ -141,13 +120,9 @@ def firstGC(filename, input_path, output_path):
             segmentation[z,:,:] += overlap
             segmentation[z,:,:] = np.where(segmentation[z,:,:]>0, 1.0, 0.0)
 
-    #-----------------------------------------------------------------------------------------------------
+    return(segmentation)
 
-    print("        Create obj and bkg...", flush=True)
-
-    # MAKE OBJ AND BKG
-    obj = np.zeros_like(data_arr)
-    bkg = np.zeros_like(data_arr)
+def head_identification(center_head, valley, segmentation, half_slice, body_side, obj, bkg):
 
     # Look for a slice in which it's possible to identify the head with some certainty
     suitable_slice_array = np.array([])
@@ -185,6 +160,82 @@ def firstGC(filename, input_path, output_path):
         #    myfile.write(message)
         #continue
 
+    return(score, slice_offset, start_search, obj, bkg, obj_head)
+
+def get_cut_slice(obj, bkg, current_segmentation_end, segmentation, valley):
+
+    # Get the top-end of femur head from init profile
+    init_profile = np.sum(np.sum(obj+bkg, axis=1), axis=1)
+    der_head = init_profile[current_segmentation_end+1:] - init_profile[current_segmentation_end:-1]
+    len_der_head = len(der_head)
+    if len_der_head>2:
+        # Smooth the derivative
+        for i in range(len_der_head):
+            if i==0:
+                der_head[i] = (der_head[i]+der_head[i+1]+der_head[i+2])/3
+            elif i==(len(der_head)-1):
+                der_head[i] = (der_head[i]+der_head[i-1]+der_head[i-2])/3
+            else:
+                der_head[i] = (der_head[i]+der_head[i-1]+der_head[i+1])/3
+
+        obj_profile = np.sum(np.sum(obj, axis=1), axis=1)
+        end_obj = np.argmin(obj_profile[current_segmentation_end:])
+        to_minimize = abs(der_head)[:end_obj]
+        to_minimize = np.where(to_minimize<5, 0.0, to_minimize)
+
+        min_der = np.argmin(to_minimize)
+        cut_slice = current_segmentation_end+min_der
+    else:
+        cut_slice = segmentation.shape[0]-1
+
+    #
+    cut_slice = np.min([valley, cut_slice])
+
+    return(cut_slice)
+
+def firstGC(filename, input_path, output_path):
+    print("    First Graph Cut", flush=True)
+    print("        Manual initialization...", flush=True)
+
+    # LOAD DATA
+    load_path = input_path+'/'+filename+".nrrd"
+    reader = ImageReader()
+    raw_img = reader(path=load_path, image_type=itk.Image[itk.F, 3])
+
+    raw_arr, info_3d = image2array(raw_img)
+
+    # GET ROI
+    ROI_arr, body_side = get_ROI(raw_img)
+    data_arr = raw_arr*ROI_arr
+
+    print("        Slice identification...", flush=True)
+
+    half_slice, center_knee, center_head, valley, obj_half_slice = slice_identification(data_arr, info_3d)
+
+    #-----------------------------------------------------------------------------------------------------
+
+    # Head
+    high_boneness_img, _ = boneness_thresholds(raw_img, smooth=10, threshold=0)
+    high_boneness_arr, _ = image2array(high_boneness_img)
+
+    #-----------------------------------------------------------------------------------------------------
+
+    # SEGMENTATION
+    # Knee
+    obj_knee, bkg_knee = knee_segmentation_pipe(data_arr, center_knee)
+
+    segmentation = create_segmentation(data_arr, high_boneness_arr)
+
+    #-----------------------------------------------------------------------------------------------------
+
+    print("        Create obj and bkg...", flush=True)
+
+    # MAKE OBJ AND BKG
+    obj = np.zeros_like(data_arr)
+    bkg = np.zeros_like(data_arr)
+
+    score, slice_offset, start_search, obj, bkg, obj_head = head_identification(center_head, valley, segmentation, half_slice, body_side, obj, bkg)
+
     obj[start_search+slice_offset+score[slice_offset]:] = 0
     bkg[start_search+slice_offset+score[slice_offset]:] = 0
 
@@ -194,7 +245,7 @@ def firstGC(filename, input_path, output_path):
     obj[center_knee,:,:] = obj_knee
     bkg[center_knee,:,:] = bkg_knee
 
-    obj[obj.shape[0]//2,:,:] = filtered_components_arr[obj.shape[0]//2,:,:]
+    obj[obj.shape[0]//2,:,:] = obj_half_slice
 
     obj = np.where(obj>0, 1.0, 0.0)
     bkg = np.where(bkg>0, 1.0, 0.0)
@@ -282,32 +333,7 @@ def firstGC(filename, input_path, output_path):
 
     #-----------------------------------------------------------------------------------------------------
 
-    # Get the top-end of femur head from init profile
-    init_profile = np.sum(np.sum(obj+bkg, axis=1), axis=1)
-    der_head = init_profile[current_segmentation_end+1:] - init_profile[current_segmentation_end:-1]
-    len_der_head = len(der_head)
-    if len_der_head>2:
-        # Smooth the derivative
-        for i in range(len_der_head):
-            if i==0:
-                der_head[i] = (der_head[i]+der_head[i+1]+der_head[i+2])/3
-            elif i==(len(der_head)-1):
-                der_head[i] = (der_head[i]+der_head[i-1]+der_head[i-2])/3
-            else:
-                der_head[i] = (der_head[i]+der_head[i-1]+der_head[i+1])/3
-
-        obj_profile = np.sum(np.sum(obj, axis=1), axis=1)
-        end_obj = np.argmin(obj_profile[current_segmentation_end:])
-        to_minimize = abs(der_head)[:end_obj]
-        to_minimize = np.where(to_minimize<5, 0.0, to_minimize)
-
-        min_der = np.argmin(to_minimize)
-        cut_slice = current_segmentation_end+min_der
-    else:
-        cut_slice = segmentation.shape[0]-1
-
-    #
-    cut_slice = np.min([valley, cut_slice])
+    cut_slice = get_cut_slice(obj, bkg, current_segmentation_end, segmentation, valley)
 
     #-----------------------------------------------------------------------------------------------------
 
@@ -344,11 +370,11 @@ def firstGC(filename, input_path, output_path):
     # SAVE INITS
 
     condition = bkg+obj
-    condition_img = array2image(bkg+obj, info_3d)
+    condition_img = array2image(condition, info_3d)
 
     #writer = VolumeWriter(path=output_path+'/'+filename+".nrrd", image=condition_img)
     #writer.write()
- 
+
     #-----------------------------------------------------------------------------------------------------
 
     print("        Running graph-cut...", flush=True)
