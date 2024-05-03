@@ -57,7 +57,14 @@ Now you are ready to build the package:
 python setup.py develop --user
 ```
 
-
+Debian 12 bookworm:
+I personally had some problems on Debian 12. Installing with conda via the yaml file led to error when trying to import itk, solved by installing via pip. Then, the error "longintrepr.h no such file or directory" from cython was raised when running setup.py: solved by using python version 3.10. Complete set of commands: 
+```console
+conda create --name itk python=3.10
+conda activate itk
+python -m pip install -r requirements.txt
+python setup.py develop --user
+```
 
 ### Testing
 
@@ -109,8 +116,10 @@ You can also provide the ground truth segmentation to format the labels for each
 Now you can segment one leg at time by running:
 
 ```console
-python run_automated_segmentation.py --input='/path/to/input/file/ --output='/path/to/output/file.nrrd'
+python run_automated_segmentation.py --input='/path/to/input/directory/ --output='/path/to/output/directory'
 ```
+
+Input should be the path to a directory containing CT femur scans in .nrrd extension, already splitted in half so that only one leg is present in each CT scan. **All the files of input directory will be processed**. The output directory is the directory in which the 3D segmentation corresponding to each input file will be saved. For any support write to federico.magnani9@unibo.it.
 
 ### Semi-Automated Segmentation
 
@@ -210,11 +219,13 @@ See [here](https://github.com/RiccardoBiondi/FemurSegmentation/blob/master/CONTR
 
 * **Riccardo Biondi** [git](https://github.com/RiccardoBiondi), [unibo](https://www.unibo.it/sitoweb/riccardo.biondi7)
 
+* **Federico Magnani** [git](https://github.com/FMagnani), [unibo](https://www.unibo.it/sitoweb/federico.magnani9)
+
 * **Daniele Dall'Olio** [git](https://github.com/DanieleDallOlio), [unibo](https://www.unibo.it/sitoweb/daniele.dallolio)
 
 * **Nico Curti** [git](https://github.com/Nico-Curti), [unibo](https://www.unibo.it/sitoweb/nico.curti2)
 
-* **Gastone Castellni** [unibo](https://www.unibo.it/sitoweb/gastone.castellani)
+* **Gastone Castellani** [unibo](https://www.unibo.it/sitoweb/gastone.castellani)
 
 ## Acknowledgments
 
