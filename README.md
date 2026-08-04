@@ -54,7 +54,7 @@ python -m pip install -r requirements.txt
 Now you are ready to build the package:
 
 ```console
-python setup.py develop --user
+python -m pip install -e .
 ```
 
 Debian 12 bookworm:
@@ -63,7 +63,7 @@ I personally had some problems on Debian 12. Installing with conda via the yaml 
 conda create --name itk python=3.10
 conda activate itk
 python -m pip install -r requirements.txt
-python setup.py develop --user
+python -m pip install -e .
 ```
 
 ### Testing

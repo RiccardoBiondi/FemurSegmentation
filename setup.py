@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/env python
 
-# python setup.py develop --user
+# python -m pip install -e .
 
 import os
 import platform
-import numpy as np
 
 try:
     from setuptools import setup
     from setuptools import Extension
     from setuptools import find_packages
     from setuptools import dist
-    dist.Distribution().fetch_build_eggs(['Cython>=0.29.0', 'numpy>=1.10'])
 
 except ImportError:
     from distutils.core import setup
@@ -22,6 +20,11 @@ except ImportError:
 from Cython.Distutils import build_ext
 from distutils.sysconfig import customize_compiler
 
+
+class LazyNumPyInclude(str):
+    def __str__(self):
+        import numpy as np
+        return np.get_include()
 
 def get_requires(requirements_filename):
     '''
@@ -136,7 +139,8 @@ ext_modules = [Extension(name='.'.join(['lib', 'GraphCutSupport']),
                 libraries=[],
                 library_dirs=[os.path.join('usr', 'lib'),
                             os.path.join('usr', 'local', 'lib')],
-                include_dirs=[np.get_include(),
+                include_dirs=[
+                        LazyNumPyInclude(),
                         os.path.join(os.getcwd(), 'include'),
                         os.path.join(os.getcwd(), 'maxflow-v3.01')],
                 extra_compile_args=whole_compiler_args,
